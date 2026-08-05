@@ -1,0 +1,39 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+  <div class="leading">
+    <span class="material-icons app-icon">menu</span>
+  </div>
+  <div class="title">Olá, {{ userName }}!</div>
+  <div class="actions">
+    <button class="icon-button" (click)="logout()" aria-label="Logout">
+      <span class="material-icons">logout</span>
+    </button>
+  </div>
+</header>
+
+<div class="home-content">
+  <div class="dashboard-shell">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Bem-vindo ao sistema</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Esta é a tela principal do aplicativo.</p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+  <a routerLink="/home" routerLinkActive="active" class="nav-item" aria-current="page">
+    <span class="material-icons">home</span>
+    <span class="label">Home</span>
+  </a>
+  <a routerLink="/entities" routerLinkActive="active" class="nav-item">
+    <span class="material-icons">layers</span>
+    <span class="label">Entities</span>
+  </a>
+  <a routerLink="/account" routerLinkActive="active" class="nav-item">
+    <span class="material-icons">send</span>
+    <span class="label">Account</span>
+  </a>
+</nav>

@@ -1,0 +1,47 @@
+<div class="login-shell">
+    <mat-card class="login-card">
+        <mat-card-header>
+            <img class="login-logo" src="sabae-max.png" alt="SABAE-PE Logo" style="width: 200px;" />
+            <mat-card-title>Seja bem-vindo(a)!</mat-card-title>
+            <mat-card-subtitle>Use sua conta para acessar o sistema</mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+            <form class="login-form" (ngSubmit)="submit()" #loginForm="ngForm">
+                <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
+                    <mat-label>E-mail</mat-label>
+                    <input matInput type="email" name="email" [(ngModel)]="loginData.email" required
+                        autocomplete="email" />
+                    <mat-icon matSuffix>email</mat-icon>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
+                    <mat-label>Senha</mat-label>
+                    <input matInput [type]="hidePassword ? 'password' : 'text'" name="password"
+                        [(ngModel)]="loginData.password" required minlength="6" autocomplete="current-password" />
+                    <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                        [attr.aria-label]="hidePassword ? 'Mostrar senha' : 'Ocultar senha'">
+                        <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                    </button>
+                    <mat-hint align="start"><a class="forgot-password-link" href="#">Esqueceu sua senha?</a></mat-hint>
+                </mat-form-field>
+
+                <mat-checkbox name="remember" color="primary" [(ngModel)]="loginData.remember">
+                    Lembre-se de mim
+                </mat-checkbox>
+
+                <button mat-raised-button color="primary" class="full-width submit-button" type="submit"
+                    [class.loading]="isSubmitting" [disabled]="loginForm.invalid || isSubmitting">
+                    <span class="button-content" *ngIf="!isSubmitting">Entrar</span>
+                    <span class="button-content" *ngIf="isSubmitting">
+                        <mat-spinner class="button-spinner" diameter="20" strokeWidth="2"></mat-spinner>
+                        Entrando...
+                    </span>
+                </button>
+                <div class="auth-error" *ngIf="authError">{{ authError }}</div>
+                <div class="signup-text">Ainda não tem um conta? <a href="#">Crie a sua</a></div>
+            </form>
+
+        </mat-card-content>
+    </mat-card>
+</div>

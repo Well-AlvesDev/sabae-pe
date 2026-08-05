@@ -1,0 +1,194 @@
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px;
+  
+}
+
+.login-card {
+  width: min(420px, 100%);
+  max-width: 420px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0), 0 8px 16px rgba(0, 0, 0, 0);
+  overflow: hidden;
+  top: -60px;
+}
+
+.login-card mat-card-header {
+  padding: 24px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.login-card mat-card-header .login-logo {
+  width: 180px;
+  height: auto;
+  margin-bottom: -20px;
+  order: -1;
+}
+
+.login-card mat-card-header mat-card-title {
+  order: 0;
+}
+
+.login-card mat-card-header mat-card-subtitle {
+  order: 1;
+}
+
+.login-card mat-card-content {
+  padding: 0 20px 24px;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.login-shell mat-icon {
+  color: #6d6d6d;
+}
+
+.forgot-password-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #1478dc;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.submit-button {
+  margin-top: 4px;
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.button-spinner {
+  color: #ffffff;
+}
+
+.submit-button.loading {
+  background-color: #90caf9 !important;
+  color: #0d47a1 !important;
+}
+
+.submit-button.loading .button-spinner {
+  color: #0d47a1;
+}
+
+.signup-text {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.signup-text a {
+  color: #1566b7;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.signup-text a:hover {
+  text-decoration: underline;
+}
+
+.auth-error {
+  margin-top: 10px;
+  color: #d32f2f;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.submit-button:disabled,
+.submit-button[disabled] {
+  background-color: #c0c0c0 !important;
+  color: #6d6d6d !important;
+  border-color: transparent !important;
+}
+
+.separator {
+  margin: 22px 0 14px;
+  text-align: center;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+mat-card-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+mat-card-subtitle {
+  color: rgba(0, 0, 0, 0.62);
+  font-size: 0.98rem;
+  margin-top: 4px;
+}
+
+mat-checkbox {
+  margin-top: 4px;
+  
+}
+
+@media (max-width: 400px) {
+  .login-shell {
+    padding: 14px 10px;
+  }
+
+  .login-card {
+    width: 100%;
+    border-radius: 4px;
+  }
+
+  mat-card-title {
+    font-size: 1.35rem;
+  }
+
+  mat-card-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .login-card mat-card-header,
+  .login-card mat-card-content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Neutralize Angular Material invalid (red) styling for this login form */
+.login-shell .mat-form-field.mat-form-field-invalid .mat-form-field-label,
+.login-shell .mat-form-field.mat-form-field-invalid .mat-form-field-ripple,
+.login-shell .mat-form-field.mat-form-field-invalid .mat-form-field-outline {
+  color: rgba(0, 0, 0, 0.87) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.login-shell .mat-form-field .mat-form-field-ripple {
+  background-color: transparent !important;
+}
+
+.login-shell .mat-form-field .mat-form-field-label {
+  color: rgba(0, 0, 0, 0.87) !important;
+}
