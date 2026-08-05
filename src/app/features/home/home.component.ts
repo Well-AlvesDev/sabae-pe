@@ -12,7 +12,8 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
   styleUrls: ['./home.scss'],
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  userName = 'usuário';
+  public userName: string = 'usuário';
+  public avatarInitial: string = 'U';
   private authSub1: any;
   private authSub2: any;
 
@@ -51,6 +52,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
       if (user) {
         this.userName = this.formatUserName(user);
+        this.avatarInitial = this.getAvatarInitial(this.userName);
         console.debug('[home] resolved userName', this.userName);
         try { this.cdr.detectChanges(); } catch {}
       }
@@ -113,5 +115,9 @@ export class HomeComponent implements OnInit, OnDestroy {
       // ignore
     }
     return 'usuário';
+  }
+
+  private getAvatarInitial(name: string): string {
+    return String(name || 'U').trim().charAt(0).toUpperCase() || 'U';
   }
 }

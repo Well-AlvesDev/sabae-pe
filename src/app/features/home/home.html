@@ -1,18 +1,21 @@
 <header class="top-app-bar" role="banner" aria-label="Barra superior">
   <div class="leading">
-    <span class="material-icons app-icon">menu</span>
+    <button class="icon-button menu-button" aria-label="Abrir menu">
+      <span class="material-icons">menu</span>
+    </button>
+    <div class="brand" aria-label="Logo da SABAE">
+      <img src="/sabae-max.png" alt="SABAE logo" class="app-bar-logo">
+    </div>
   </div>
-  <div class="title">Olá, {{ userName }}!</div>
   <div class="actions">
-    <button class="icon-button" (click)="logout()" aria-label="Logout">
-      <span class="material-icons">logout</span>
+    <div class="profile-avatar" aria-label="Perfil do usuário">{{ (userName || 'U').trim().charAt(0) | uppercase }}
+    </div>
+    <button class="icon-button" aria-label="Notificações">
+      <span class="material-icons">notifications</span>
     </button>
   </div>
 </header>
 
-<div class="logo-container" role="img" aria-label="SABAE logo">
-  <img src="/sabae-max.png" alt="SABAE logo" class="app-logo">
-</div>
 
 <div class="home-content">
   <div class="dashboard-shell">
@@ -21,16 +24,25 @@
 </div>
 
 <nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
-  <a routerLink="/home" routerLinkActive="active" class="nav-item" aria-current="page">
+  <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"
+    aria-current="page">
     <span class="material-icons">home</span>
-    <span class="label">Home</span>
+    <span class="label">Início</span>
   </a>
-  <a routerLink="/entities" routerLinkActive="active" class="nav-item">
-    <span class="material-icons">layers</span>
-    <span class="label">Entities</span>
+  <a class="nav-item" href="#" aria-label="Alunos">
+    <span class="material-icons">people</span>
+    <span class="label">Alunos</span>
   </a>
-  <a routerLink="/account" routerLinkActive="active" class="nav-item">
-    <span class="material-icons">send</span>
-    <span class="label">Account</span>
+  <a class="nav-item" href="#" aria-label="Relatórios">
+    <span class="material-icons">bar_chart</span>
+    <span class="label">Relatórios</span>
+  </a>
+  <a class="nav-item" href="#" aria-label="Notificações">
+    <span class="material-icons">notifications</span>
+    <span class="label">Notificações</span>
+  </a>
+  <a class="nav-item" href="#" aria-label="Perfil">
+    <span class="material-icons">account_circle</span>
+    <span class="label">Perfil</span>
   </a>
 </nav>
