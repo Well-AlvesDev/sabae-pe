@@ -1,4 +1,4 @@
-﻿{
+{
     "version": 2,
     "builds": [
         {
@@ -9,7 +9,6 @@
             }
         }
     ],
-    "buildCommand": "npm run vercel-build",
     "rewrites": [
         {
             "source": "/(.*)",
