@@ -8,7 +8,9 @@
     </div>
   </div>
   <div class="actions">
-    <div class="profile-avatar" aria-label="Perfil do usuário">{{ (userName || 'U').trim().charAt(0) | uppercase }}
+    <div class="profile-avatar" [class.loading]="isLoadingProfile" aria-label="Perfil do usuário">
+      <span *ngIf="!isLoadingProfile">{{ avatarInitial }}</span>
+      <span *ngIf="isLoadingProfile" class="avatar-spinner" aria-hidden="true"></span>
     </div>
     <button class="icon-button" aria-label="Notificações">
       <span class="material-icons">notifications</span>

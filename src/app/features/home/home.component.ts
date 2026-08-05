@@ -14,12 +14,17 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 export class HomeComponent implements OnInit, OnDestroy {
   public userName: string = 'usuário';
   public avatarInitial: string = 'U';
+  public isLoadingProfile = true;
   private authSub1: any;
   private authSub2: any;
+  private loadingStart = Date.now();
 
   constructor(private router: Router, private cdr: ChangeDetectorRef) {}
 
   async ngOnInit(): Promise<void> {
+    this.isLoadingProfile = true;
+    this.loadingStart = Date.now();
+
     try {
       const [{ data: localData }, { data: sessionData }] = await Promise.all([
         supabase.auth.getUser(),
@@ -54,10 +59,16 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.userName = this.formatUserName(user);
         this.avatarInitial = this.getAvatarInitial(this.userName);
         console.debug('[home] resolved userName', this.userName);
-        try { this.cdr.detectChanges(); } catch {}
       }
     } catch (err) {
       console.debug('[home] getUser error', err);
+    } finally {
+      const elapsed = Date.now() - this.loadingStart;
+      if (elapsed < 1000) {
+        await new Promise<void>(resolve => setTimeout(resolve, 1000 - elapsed));
+      }
+      this.isLoadingProfile = false;
+      try { this.cdr.detectChanges(); } catch {}
     }
 
     // also listen for auth state changes so name updates if session is set after navigation
