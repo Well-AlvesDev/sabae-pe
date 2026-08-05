@@ -21,7 +21,37 @@
 
 <div class="home-content">
   <div class="dashboard-shell">
-    <!-- Conteúdo principal (card de boas-vindas removido) -->
+    <div class="overview-title-row" aria-label="Visão Geral da Escola">
+      <h2>Visão Geral da Escola</h2>
+    </div>
+
+    <section class="overview-card" aria-label="Visão Geral da Escola">
+      <div class="overview-body">
+        <div class="overview-left">
+          <div class="card-title">
+            <span class="material-icons">military_tech</span>
+            <strong>Avaliação de frequência</strong>
+          </div>
+          <div class="score-row">
+            <div class="score-label">Média Geral:</div>
+            <div class="score-value">{{ averageScore }}/10</div>
+          </div>
+          <div class="performance-badge" [attr.aria-label]="performanceLabel">
+            <span class="material-icons">check_circle</span>
+            <span class="badge-text">{{ performanceLabel }}</span>
+          </div>
+        </div>
+
+        <div class="overview-right" aria-hidden="false">
+          <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
+            <circle class="ring-bg" cx="21" cy="21" r="15.5" />
+            <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)" />
+            <text x="21" y="22" class="ring-text" text-anchor="middle">{{ averageScore }}</text>
+            <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
+          </svg>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 

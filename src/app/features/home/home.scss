@@ -1,9 +1,7 @@
 .dashboard-shell {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
+  display: block;
+  min-height: auto; /* don't force full viewport height, prevents large gaps */
+  padding: 0; /* keep layout tight, spacing managed by .overview-card */
 }
 
 dashboard-shell mat-card {
@@ -104,7 +102,7 @@ dashboard-shell mat-card {
   padding: 8px;
 }
 
-.home-content { padding-top: calc(64px + 16px); padding-bottom: calc(24px + 72px); }
+.home-content { padding-top: 0; padding-bottom: calc(24px + 72px); }
 
 /* Logo container placed below the fixed top app bar */
 .logo-container {
@@ -156,9 +154,7 @@ dashboard-shell mat-card {
   color: #ffffff;
 }
 
-.bottom-nav .nav-item:hover {
-  transform: translateY(-2px);
-}
+
 
 .bottom-nav .nav-item .material-icons {
   font-size: 24px;
@@ -189,4 +185,61 @@ dashboard-shell mat-card {
     padding: 8px 4px;
     font-size: 11px;
   }
+}
+
+/* Overview card */
+.overview-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0c365c;
+  width: min(720px, 96%);
+  margin: calc(72px + 12px) auto 10px;
+}
+
+.overview-title-row h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.overview-card {
+  width: min(720px, 96%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 4px 3px 3px rgba(12, 54, 92, 0.08);
+  padding: 18px;
+  display: block;
+  margin: 0 auto 0;
+}
+
+.overview-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.overview-left { flex: 1 1 auto; }
+
+.card-title { display:flex; align-items:center; gap:8px; color:#0c365c; margin-bottom:8px; }
+.card-title strong { font-size:14px; }
+
+.score-row { display:flex; align-items:baseline; gap:8px; margin-bottom:10px; }
+.score-label { color:#6b7280; font-size:13px; }
+.score-value { font-size:20px; font-weight:700; color:#0f4d91; }
+
+.performance-badge { display:inline-flex; align-items:center; gap:8px; background:#e6fbef; color:#0a6b3a; padding:6px 10px; border-radius:12px; font-weight:600; width:max-content; }
+.performance-badge .material-icons { font-size:16px; }
+
+.overview-right { width:110px; display:flex; align-items:center; justify-content:center; }
+.score-ring { width:88px; height:88px; display:block; }
+.score-ring .ring-bg { fill: none; stroke: #eef6fb; stroke-width:3; }
+.score-ring .ring { fill:none; stroke: #1e3a8a; stroke-width:3; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 21px 21px; transition: stroke-dasharray 0.6s ease; }
+.ring-text { font-size:8px; fill:#0f4d91; font-weight:700; }
+.ring-subtext { font-size:6px; fill:#6b7280; }
+
+@media (max-width:640px) {
+  .overview-body { flex-direction:row; }
+  .overview-right { width:86px; }
 }

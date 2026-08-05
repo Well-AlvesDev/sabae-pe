@@ -15,6 +15,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   public userName: string = 'usuário';
   public avatarInitial: string = 'U';
   public isLoadingProfile = true;
+  public averageScore: number = 8.5;
+  public performanceLabel: string = 'Bom Desempenho';
   private authSub1: any;
   private authSub2: any;
   private loadingStart = Date.now();
@@ -95,6 +97,15 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
       this.authSub2 = d2?.subscription;
     } catch {}
+  }
+
+  public calcDashArray(score: number): string {
+    const r = 15.5;
+    const circumference = 2 * Math.PI * r;
+    const clamped = Math.max(0, Math.min(10, Number(score || 0)));
+    const filled = (clamped / 10) * circumference;
+    // return filled length then the remaining length so stroke-dasharray shows a partial arc
+    return `${filled} ${circumference}`;
   }
 
   async logout(): Promise<void> {
