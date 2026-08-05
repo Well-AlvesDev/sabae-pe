@@ -49,6 +49,21 @@ dashboard-shell mat-card {
 
 .home-content { padding-top: calc(64px + 16px); padding-bottom: calc(24px + 72px); }
 
+/* Logo container placed below the fixed top app bar */
+.logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 16px 8px;
+}
+
+.app-logo {
+  max-width: 300px;
+  width: 60%;
+  height: auto;
+  display: block;
+}
+
 /* Bottom navigation styles (home only) */
 .bottom-nav {
   position: fixed;
