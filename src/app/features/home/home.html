@@ -1,6 +1,6 @@
 <header class="top-app-bar" role="banner" aria-label="Barra superior">
   <div class="leading">
-    <button class="icon-button menu-button" aria-label="Abrir menu">
+    <button class="icon-button menu-button" aria-label="Abrir menu" (click)="toggleMenu()">
       <span class="material-icons">menu</span>
     </button>
     <div class="brand" aria-label="Logo da SABAE">
@@ -17,6 +17,51 @@
     </button>
   </div>
 </header>
+
+<div class="drawer-backdrop" *ngIf="isMenuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+<nav class="side-drawer" [class.open]="isMenuOpen" aria-label="Menu lateral">
+  <div class="drawer-header"
+    [ngStyle]="{ 'background-image': drawerBackgroundUrl ? 'url(' + drawerBackgroundUrl + ')' : 'none' }">
+    <div class="drawer-overlay"></div>
+    <div class="drawer-profile">
+      <div class="drawer-avatar">{{ avatarInitial }}</div>
+      <div class="drawer-text">
+        <div class="drawer-title">SABAE-PE</div>
+        <div class="drawer-subtitle">{{ userEmail }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-items">
+    <a class="drawer-item" href="#">
+      <span class="material-icons">favorite</span>
+      Favoritos
+    </a>
+    <a class="drawer-item" href="#">
+      <span class="material-icons">people</span>
+      Amigos
+    </a>
+    <a class="drawer-item" href="#">
+      <span class="material-icons">share</span>
+      Compartilhar
+    </a>
+    <a class="drawer-item" href="#">
+      <span class="material-icons">notifications</span>
+      Solicitação
+    </a>
+    <a class="drawer-item" href="#">
+      <span class="material-icons">settings</span>
+      Configurações
+    </a>
+    <a class="drawer-item" href="#">
+      <span class="material-icons">policy</span>
+      Políticas
+    </a>
+    <button class="drawer-item logout-button" (click)="logout()" type="button">
+      <span class="material-icons">exit_to_app</span>
+      Sair
+    </button>
+  </div>
+</nav>
 
 
 <div class="home-content">

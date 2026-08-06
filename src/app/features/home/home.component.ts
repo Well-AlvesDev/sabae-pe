@@ -13,8 +13,11 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 })
 export class HomeComponent implements OnInit, OnDestroy {
   public userName: string = 'usuário';
+  public userEmail: string = 'example@gmail.com';
   public avatarInitial: string = 'U';
   public isLoadingProfile = true;
+  public isMenuOpen = false;
+  public drawerBackgroundUrl = '';
   public averageScore: number = 8.5;
   public performanceLabel: string = 'Bom Desempenho';
   private authSub1: any;
@@ -59,6 +62,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
       if (user) {
         this.userName = this.formatUserName(user);
+        this.userEmail = user.email || this.userEmail;
         this.avatarInitial = this.getAvatarInitial(this.userName);
         console.debug('[home] resolved userName', this.userName);
       }
@@ -106,6 +110,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     const filled = (clamped / 10) * circumference;
     // return filled length then the remaining length so stroke-dasharray shows a partial arc
     return `${filled} ${circumference}`;
+  }
+
+  public toggleMenu(): void {
+    this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  public closeMenu(): void {
+    this.isMenuOpen = false;
   }
 
   async logout(): Promise<void> {

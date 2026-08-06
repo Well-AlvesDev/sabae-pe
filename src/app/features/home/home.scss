@@ -59,6 +59,166 @@ dashboard-shell mat-card {
   position: relative;
 }
 
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  z-index: 1050;
+}
+
+.side-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(280px, 84vw);
+  max-width: 320px;
+  transform: translateX(-110%);
+  transition: transform 0.28s ease;
+  z-index: 1060;
+  overflow-y: auto;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.24);
+  background: #fff;
+}
+
+.side-drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  position: relative;
+  min-height: 220px;
+  background-color: #0c365c;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  padding: 20px 16px;
+}
+
+.drawer-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 18, 45, 0.95);
+}
+
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(8, 18, 45, 0.16), rgba(8, 18, 45, 0.84));
+}
+
+.drawer-profile {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  z-index: 1;
+}
+
+.drawer-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #1f4d84;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.drawer-text {
+  color: #fff;
+  line-height: 1.2;
+}
+
+.drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.drawer-subtitle {
+  margin-top: 4px;
+  font-size: 13px;
+  opacity: 0.88;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-items {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  gap: 6px;
+}
+
+.drawer-item,
+.drawer-item.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #102642;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  text-align: left;
+}
+
+.drawer-item .material-icons {
+  font-size: 22px;
+  color: #0c365c;
+}
+
+.drawer-item:hover,
+.drawer-item.logout-button:hover {
+  background: rgba(12, 54, 92, 0.06);
+}
+
+.drawer-item.logout-button {
+  width: 100%;
+}
+
+.drawer-item.logout-button .material-icons {
+  color: #b92d23;
+}
+
+.side-drawer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.08) 100%);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .top-app-bar {
+    padding: 0 12px;
+  }
+
+  .drawer-header {
+    min-height: 200px;
+    padding: 18px 14px;
+  }
+
+  .drawer-avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+}
+
 .profile-avatar.loading {
   background: rgba(255, 255, 255, 0.88);
   color: transparent;
