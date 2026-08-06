@@ -89,7 +89,9 @@
               <div class="score-label">Média Geral:</div>
               <div class="score-value">{{ averageScore }}/10</div>
             </div>
-            <div class="performance-badge" [attr.aria-label]="performanceLabel">
+            <div class="performance-badge" [class.good]="performanceClass === 'good'"
+              [class.warning]="performanceClass === 'warning'" [class.danger]="performanceClass === 'danger'"
+              [attr.aria-label]="performanceLabel">
               <span class="material-icons">check_circle</span>
               <span class="badge-text">{{ performanceLabel }}</span>
             </div>
@@ -100,7 +102,8 @@
           <ng-container *ngIf="!isLoadingAttendanceScore; else ringLoading">
             <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
               <circle class="ring-bg" cx="21" cy="21" r="15.5" />
-              <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)" />
+              <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)"
+                [attr.stroke]="performanceClass === 'good' ? '#1f9d5f' : performanceClass === 'warning' ? '#f59e0b' : performanceClass === 'danger' ? '#dc2626' : '#1e3a8a'" />
               <text x="21" y="22" class="ring-text" text-anchor="middle">{{ averageScore }}</text>
               <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
             </svg>

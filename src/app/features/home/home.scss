@@ -393,8 +393,11 @@ dashboard-shell mat-card {
 .score-label { color:#6b7280; font-size:13px; }
 .score-value { font-size:20px; font-weight:700; color:#0f4d91; }
 
-.performance-badge { display:inline-flex; align-items:center; gap:8px; color:#0a6b3a; padding:6px 10px; font-weight:600; width:max-content; }
+.performance-badge { display:inline-flex; align-items:center; gap:8px; color:#0a6b3a; padding:6px 10px; font-weight:600; width:max-content; border-radius:999px; background:rgba(10, 107, 58, 0.1); }
 .performance-badge .material-icons { font-size:16px; }
+.performance-badge.warning { color:#b45309; background:transparent; border:1px solid rgba(180, 83, 9, 0.24); }
+.performance-badge.danger { color:#b91c1c; background:transparent; border:1px solid rgba(185, 28, 28, 0.24); }
+.performance-badge.good { color:#0a6b3a; background:transparent; border:1px solid rgba(10, 107, 58, 0.24); }
 
 .card-loader {
   display:flex;

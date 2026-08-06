@@ -21,6 +21,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public drawerBackgroundUrl = '/lines.png';
   public averageScore: number = 0;
   public performanceLabel: string = 'Carregando...';
+  public performanceClass: 'good' | 'warning' | 'danger' | 'neutral' = 'neutral';
   private readonly tbdaColumns = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   private authSub1: any;
   private authSub2: any;
@@ -38,7 +39,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       console.debug('[home] cachedRows', { cachedRows });
       if (cachedRows && cachedRows.length) {
         this.averageScore = this.computeAttendanceScore(cachedRows);
-        this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+        this.setPerformanceState(this.averageScore);
         console.debug('[home] loaded TBDA from cache before auth check', { averageScore: this.averageScore });
       }
 
@@ -82,18 +83,19 @@ export class HomeComponent implements OnInit, OnDestroy {
           console.debug('[home] cachedRows', { cachedRows });
           if (cachedRows && cachedRows.length) {
             this.averageScore = this.computeAttendanceScore(cachedRows);
-            this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+            this.setPerformanceState(this.averageScore);
             console.debug('[home] loaded TBDA from cache', { averageScore: this.averageScore, cachedRows });
           } else {
             const useSessionStorage = !!sessionData?.user && !localData?.user;
             const rows = await syncTbdaCache(useSessionStorage);
             this.averageScore = this.computeAttendanceScore(rows);
-            this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+            this.setPerformanceState(this.averageScore);
             console.debug('[home] TBDA cache synced successfully', { averageScore: this.averageScore, rows });
           }
         } catch (tbdaError) {
           console.error('[home] failed to sync TBDA cache', tbdaError);
           this.performanceLabel = 'Não foi possível carregar a frequência';
+          this.performanceClass = 'neutral';
         }
       }
     } catch (err) {
@@ -186,17 +188,21 @@ export class HomeComponent implements OnInit, OnDestroy {
     return Math.floor(score * 100) / 100;
   }
 
-  private getPerformanceLabel(score: number): string {
-    if (score >= 9) {
-      return 'Excelente desempenho';
+  private setPerformanceState(score: number): void {
+    if (score >= 8) {
+      this.performanceLabel = 'Bom desempenho';
+      this.performanceClass = 'good';
+      return;
     }
+
     if (score >= 7) {
-      return 'Bom desempenho';
+      this.performanceLabel = 'Médio desempenho';
+      this.performanceClass = 'warning';
+      return;
     }
-    if (score >= 5) {
-      return 'Desempenho médio';
-    }
-    return 'Precisa melhorar';
+
+    this.performanceLabel = 'Baixo desempenho';
+    this.performanceClass = 'danger';
   }
 
   public toggleMenu(): void {
