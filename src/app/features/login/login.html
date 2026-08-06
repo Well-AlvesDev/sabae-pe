@@ -31,7 +31,7 @@
                 </mat-checkbox>
 
                 <button mat-raised-button color="primary" class="full-width submit-button" type="submit"
-                    [class.loading]="isSubmitting" [disabled]="loginForm.invalid || isSubmitting">
+                    [class.loading]="isSubmitting">
                     <span class="button-content" *ngIf="!isSubmitting">Entrar</span>
                     <span class="button-content" *ngIf="isSubmitting">
                         <mat-spinner class="button-spinner" diameter="20" strokeWidth="2"></mat-spinner>

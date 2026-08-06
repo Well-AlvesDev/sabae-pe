@@ -1,7 +1,13 @@
 @use '@angular/material' as mat;
 @use '@angular/material/core/m2' as m2;
 
-$primary: m2.define-palette(m2.$blue-palette);
+$primary: m2.define-palette(
+  map-merge(
+    m2.$blue-palette,
+    (500: #0f4d91)
+  ),
+  500
+);
 $accent: m2.define-palette(m2.$pink-palette, A200, A100, A400);
 $theme: m2.define-light-theme($primary, $accent);
 
