@@ -396,6 +396,51 @@ dashboard-shell mat-card {
 .performance-badge { display:inline-flex; align-items:center; gap:8px; color:#0a6b3a; padding:6px 10px; font-weight:600; width:max-content; }
 .performance-badge .material-icons { font-size:16px; }
 
+.card-loader {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top: 8px;
+}
+
+.loader-line {
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(12,54,92,0.08), rgba(12,54,92,0.14), rgba(12,54,92,0.08));
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.loader-line.short { width: 130px; }
+.loader-line.long { width: 190px; }
+.loader-line.badge { width: 140px; height: 22px; }
+
+.ring-loader {
+  width: 88px;
+  height: 88px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+}
+
+.loader-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgba(15, 77, 145, 0.18);
+  border-top-color: #0f4d91;
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
 .overview-right { width:110px; display:flex; align-items:center; justify-content:center; }
 .score-ring { width:88px; height:88px; display:block; }
 .score-ring .ring-bg { fill: none; stroke: #eef6fb; stroke-width:3; }

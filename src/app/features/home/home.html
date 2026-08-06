@@ -77,23 +77,39 @@
             <span class="material-icons">military_tech</span>
             <strong>Avaliação de frequência</strong>
           </div>
-          <div class="score-row">
-            <div class="score-label">Média Geral:</div>
-            <div class="score-value">{{ averageScore }}/10</div>
-          </div>
-          <div class="performance-badge" [attr.aria-label]="performanceLabel">
-            <span class="material-icons">check_circle</span>
-            <span class="badge-text">{{ performanceLabel }}</span>
-          </div>
+          <ng-container *ngIf="isLoadingAttendanceScore; else attendanceContent">
+            <div class="card-loader" aria-label="Carregando avaliação de frequência">
+              <div class="loader-line short"></div>
+              <div class="loader-line long"></div>
+              <div class="loader-line badge"></div>
+            </div>
+          </ng-container>
+          <ng-template #attendanceContent>
+            <div class="score-row">
+              <div class="score-label">Média Geral:</div>
+              <div class="score-value">{{ averageScore }}/10</div>
+            </div>
+            <div class="performance-badge" [attr.aria-label]="performanceLabel">
+              <span class="material-icons">check_circle</span>
+              <span class="badge-text">{{ performanceLabel }}</span>
+            </div>
+          </ng-template>
         </div>
 
-        <div class="overview-right" aria-hidden="false">
-          <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
-            <circle class="ring-bg" cx="21" cy="21" r="15.5" />
-            <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)" />
-            <text x="21" y="22" class="ring-text" text-anchor="middle">{{ averageScore }}</text>
-            <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
-          </svg>
+        <div class="overview-right" [attr.aria-hidden]="isLoadingAttendanceScore ? 'true' : 'false'">
+          <ng-container *ngIf="!isLoadingAttendanceScore; else ringLoading">
+            <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
+              <circle class="ring-bg" cx="21" cy="21" r="15.5" />
+              <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)" />
+              <text x="21" y="22" class="ring-text" text-anchor="middle">{{ averageScore }}</text>
+              <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
+            </svg>
+          </ng-container>
+          <ng-template #ringLoading>
+            <div class="ring-loader" aria-label="Carregando avaliação de frequência">
+              <span class="loader-spinner" aria-hidden="true"></span>
+            </div>
+          </ng-template>
         </div>
       </div>
     </section>

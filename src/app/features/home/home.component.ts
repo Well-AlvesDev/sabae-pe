@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { supabase, supabaseWithSessionStorage } from '../../supabase';
+import { getTbdaCache, syncTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-home',
@@ -16,10 +16,12 @@ export class HomeComponent implements OnInit, OnDestroy {
   public userEmail: string = 'example@gmail.com';
   public avatarInitial: string = 'U';
   public isLoadingProfile = true;
+  public isLoadingAttendanceScore = true;
   public isMenuOpen = false;
   public drawerBackgroundUrl = '/lines.png';
-  public averageScore: number = 8.5;
-  public performanceLabel: string = 'Bom Desempenho';
+  public averageScore: number = 0;
+  public performanceLabel: string = 'Carregando...';
+  private readonly tbdaColumns = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   private authSub1: any;
   private authSub2: any;
   private loadingStart = Date.now();
@@ -28,9 +30,18 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.isLoadingProfile = true;
+    this.isLoadingAttendanceScore = true;
     this.loadingStart = Date.now();
 
     try {
+      const cachedRows = getTbdaCache();
+      console.debug('[home] cachedRows', { cachedRows });
+      if (cachedRows && cachedRows.length) {
+        this.averageScore = this.computeAttendanceScore(cachedRows);
+        this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+        console.debug('[home] loaded TBDA from cache before auth check', { averageScore: this.averageScore });
+      }
+
       const [{ data: localData }, { data: sessionData }] = await Promise.all([
         supabase.auth.getUser(),
         supabaseWithSessionStorage.auth.getUser(),
@@ -65,6 +76,25 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.userEmail = user.email || this.userEmail;
         this.avatarInitial = this.getAvatarInitial(this.userName);
         console.debug('[home] resolved userName', this.userName);
+
+        try {
+          const cachedRows = getTbdaCache();
+          console.debug('[home] cachedRows', { cachedRows });
+          if (cachedRows && cachedRows.length) {
+            this.averageScore = this.computeAttendanceScore(cachedRows);
+            this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+            console.debug('[home] loaded TBDA from cache', { averageScore: this.averageScore, cachedRows });
+          } else {
+            const useSessionStorage = !!sessionData?.user && !localData?.user;
+            const rows = await syncTbdaCache(useSessionStorage);
+            this.averageScore = this.computeAttendanceScore(rows);
+            this.performanceLabel = this.getPerformanceLabel(this.averageScore);
+            console.debug('[home] TBDA cache synced successfully', { averageScore: this.averageScore, rows });
+          }
+        } catch (tbdaError) {
+          console.error('[home] failed to sync TBDA cache', tbdaError);
+          this.performanceLabel = 'Não foi possível carregar a frequência';
+        }
       }
     } catch (err) {
       console.debug('[home] getUser error', err);
@@ -74,6 +104,7 @@ export class HomeComponent implements OnInit, OnDestroy {
         await new Promise<void>(resolve => setTimeout(resolve, 1000 - elapsed));
       }
       this.isLoadingProfile = false;
+      this.isLoadingAttendanceScore = false;
       try { this.cdr.detectChanges(); } catch {}
     }
 
@@ -110,6 +141,62 @@ export class HomeComponent implements OnInit, OnDestroy {
     const filled = (clamped / 10) * circumference;
     // return filled length then the remaining length so stroke-dasharray shows a partial arc
     return `${filled} ${circumference}`;
+  }
+
+  private computeAttendanceScore(rows: Record<string, unknown>[]): number {
+    const counts = rows.reduce(
+      (acc: { present: number; absent: number }, row) => {
+        const valuesToCheck: unknown[] = [];
+
+        for (const column of this.tbdaColumns) {
+          if (Object.prototype.hasOwnProperty.call(row, column)) {
+            valuesToCheck.push(row[column]);
+          }
+        }
+
+        if (!valuesToCheck.length) {
+          const allValues = Object.values(row).slice(0, this.tbdaColumns.length);
+          valuesToCheck.push(...allValues);
+        }
+
+        for (const value of valuesToCheck) {
+          if (value === null || value === undefined) {
+            continue;
+          }
+
+          const text = String(value).toUpperCase();
+          const fnjMatches = text.match(/\bFNJ\b/g) || [];
+          const pMatches = text.match(/\bP\b/g) || [];
+
+          acc.present += pMatches.length;
+          acc.absent += fnjMatches.length;
+        }
+
+        return acc;
+      },
+      { present: 0, absent: 0 },
+    );
+
+    const total = counts.present + counts.absent;
+    if (total === 0) {
+      return 0;
+    }
+
+   const score = (counts.present / total) * 10;
+    return Math.floor(score * 100) / 100;
+  }
+
+  private getPerformanceLabel(score: number): string {
+    if (score >= 9) {
+      return 'Excelente desempenho';
+    }
+    if (score >= 7) {
+      return 'Bom desempenho';
+    }
+    if (score >= 5) {
+      return 'Desempenho médio';
+    }
+    return 'Precisa melhorar';
   }
 
   public toggleMenu(): void {
