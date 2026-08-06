@@ -17,7 +17,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public avatarInitial: string = 'U';
   public isLoadingProfile = true;
   public isMenuOpen = false;
-  public drawerBackgroundUrl = '';
+  public drawerBackgroundUrl = '/lines.png';
   public averageScore: number = 8.5;
   public performanceLabel: string = 'Bom Desempenho';
   private authSub1: any;

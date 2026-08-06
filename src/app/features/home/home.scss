@@ -89,8 +89,11 @@ dashboard-shell mat-card {
   position: relative;
   min-height: 220px;
   background-color: #0c365c;
+  background-image: var(--drawer-bg-image, none);
   background-size: cover;
   background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
   padding: 20px 16px;
@@ -100,13 +103,15 @@ dashboard-shell mat-card {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(8, 18, 45, 0.95);
+  background: linear-gradient(180deg, rgba(8, 18, 45, 0.2), rgba(8, 18, 45, 0.7));
+  pointer-events: none;
 }
 
 .drawer-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(8, 18, 45, 0.16), rgba(8, 18, 45, 0.84));
+  background: linear-gradient(180deg, rgba(8, 18, 45, 0.12), rgba(8, 18, 45, 0.72));
+  pointer-events: none;
 }
 
 .drawer-profile {
