@@ -253,6 +253,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     });
   }
 
+  public get attendancePieStyle(): Record<string, string> {
+    const { presentPct, fnjPct, fjPct } = this.attendanceSummary;
+    const total = presentPct + fnjPct + fjPct;
+    if (!total) {
+      return {
+        'background-image': 'radial-gradient(circle at center, rgba(15, 77, 145, 0.08) 30%, transparent 31%), conic-gradient(#cbd5e1 0deg 360deg)',
+      };
+    }
+    return {
+      'background-image': `radial-gradient(circle at center, #ffffff 36%, transparent 37%), conic-gradient(#16a34a 0deg ${presentPct * 3.6}deg, #ea580c ${presentPct * 3.6}deg ${presentPct * 3.6 + fnjPct * 3.6}deg, #2563eb ${presentPct * 3.6 + fnjPct * 3.6}deg 360deg)`,
+    };
+  }
+
   public formatScore(value: number): string {
     return Number(value).toLocaleString('pt-BR', {
       minimumFractionDigits: 0,

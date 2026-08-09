@@ -122,7 +122,7 @@
         <div class="overview-left">
           <div class="card-title">
             <span class="material-icons">analytics</span>
-            <strong>Resumo de Presença</strong>
+            <strong>Resumo de Frequência</strong>
           </div>
           <div class="summary-items">
             <div class="summary-item">
@@ -144,6 +144,35 @@
           </div>
         </div>
 
+        <div class="summary-graph">
+          <div class="graph-title">Distribuição de Frequência</div>
+          <div class="pie-chart-and-legend">
+            <div class="pie-chart-wrapper" [ngStyle]="attendancePieStyle" role="img"
+              aria-label="Distribuição de frequência: Presenças {{ attendanceSummary.presentPct }}%, Faltas não justificadas {{ attendanceSummary.fnjPct }}%, Faltas justificadas {{ attendanceSummary.fjPct }}%">
+              <div class="pie-chart-center">
+                <strong>{{ formatNumber(attendanceSummary.totalCount) }}</strong>
+                <span>Total</span>
+              </div>
+            </div>
+            <div class="legend-list">
+              <div class="legend-item">
+                <span class="legend-swatch present"></span>
+                <span class="legend-label">Presenças</span>
+                <strong>{{ attendanceSummary.presentPct }}%</strong>
+              </div>
+              <div class="legend-item">
+                <span class="legend-swatch fnj"></span>
+                <span class="legend-label">Faltas não justificadas</span>
+                <strong>{{ attendanceSummary.fnjPct }}%</strong>
+              </div>
+              <div class="legend-item">
+                <span class="legend-swatch fj"></span>
+                <span class="legend-label">Faltas justificadas</span>
+                <strong>{{ attendanceSummary.fjPct }}%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </div>

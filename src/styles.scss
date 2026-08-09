@@ -41,7 +41,7 @@ body {
   justify-content: space-between;
   padding: 0 20px;
   background: #09437c;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.447);
   color: #fff;
   z-index: 1100;
   font-family: Roboto, sans-serif;
@@ -300,7 +300,6 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.24);
   z-index: 1000;
   padding: 0 12px;
 }
@@ -316,7 +315,6 @@ body {
   font-weight: 600;
   min-width: 64px;
   padding: 8px 6px;
-  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .bottom-nav .nav-item:hover,
