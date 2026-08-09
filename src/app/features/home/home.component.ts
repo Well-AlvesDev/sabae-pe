@@ -22,6 +22,15 @@ export class HomeComponent implements OnInit, OnDestroy {
   public averageScore: number = 0;
   public performanceLabel: string = 'Carregando...';
   public performanceClass: 'good' | 'warning' | 'danger' | 'neutral' = 'neutral';
+  public attendanceSummary = {
+    totalCount: 0,
+    present: 0,
+    fnj: 0,
+    fj: 0,
+    presentPct: 0,
+    fnjPct: 0,
+    fjPct: 0,
+  };
   private readonly tbdaColumns = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   private authSub1: any;
   private authSub2: any;
@@ -146,8 +155,21 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private computeAttendanceScore(rows: Record<string, unknown>[]): number {
-    const counts = rows.reduce(
-      (acc: { present: number; absent: number }, row) => {
+    const counts = this.extractAttendanceCounts(rows);
+    this.updateAttendanceSummary(counts);
+
+    const totalForScore = counts.present + counts.fnj;
+    if (totalForScore === 0) {
+      return 0;
+    }
+
+   const score = (counts.present / totalForScore) * 10;
+    return Math.floor(score * 100) / 100;
+  }
+
+  private extractAttendanceCounts(rows: Record<string, unknown>[]) {
+    return rows.reduce(
+      (acc: { present: number; fnj: number; fj: number }, row) => {
         const valuesToCheck: unknown[] = [];
 
         for (const column of this.tbdaColumns) {
@@ -166,26 +188,45 @@ export class HomeComponent implements OnInit, OnDestroy {
             continue;
           }
 
-          const text = String(value).toUpperCase();
-          const fnjMatches = text.match(/\bFNJ\b/g) || [];
-          const pMatches = text.match(/\bP\b/g) || [];
+          const tokens = String(value)
+            .toUpperCase()
+            .split(/[^A-Z0-9]+/)
+            .filter(Boolean);
 
-          acc.present += pMatches.length;
-          acc.absent += fnjMatches.length;
+          for (const token of tokens) {
+            if (token === 'P') {
+              acc.present += 1;
+            }
+            if (token === 'FNJ') {
+              acc.fnj += 1;
+            }
+            if (token === 'FJ') {
+              acc.fj += 1;
+            }
+          }
         }
 
         return acc;
       },
-      { present: 0, absent: 0 },
+      { present: 0, fnj: 0, fj: 0 },
     );
+  }
 
-    const total = counts.present + counts.absent;
-    if (total === 0) {
-      return 0;
-    }
+  private updateAttendanceSummary(counts: { present: number; fnj: number; fj: number }): void {
+    const totalCount = counts.present + counts.fnj + counts.fj;
+    const presentPct = totalCount ? Math.round((counts.present / totalCount) * 100) : 0;
+    const fnjPct = totalCount ? Math.round((counts.fnj / totalCount) * 100) : 0;
+    const fjPct = totalCount ? Math.round((counts.fj / totalCount) * 100) : 0;
 
-   const score = (counts.present / total) * 10;
-    return Math.floor(score * 100) / 100;
+    this.attendanceSummary = {
+      totalCount,
+      present: counts.present,
+      fnj: counts.fnj,
+      fj: counts.fj,
+      presentPct,
+      fnjPct,
+      fjPct,
+    };
   }
 
   private setPerformanceState(score: number): void {
@@ -203,6 +244,20 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this.performanceLabel = 'Baixo desempenho';
     this.performanceClass = 'danger';
+  }
+
+  public formatNumber(value: number): string {
+    return Number(value).toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  }
+
+  public formatScore(value: number): string {
+    return Number(value).toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
   }
 
   public toggleMenu(): void {

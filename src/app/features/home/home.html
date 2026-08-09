@@ -87,7 +87,7 @@
           <ng-template #attendanceContent>
             <div class="score-row">
               <div class="score-label">Média Geral:</div>
-              <div class="score-value">{{ averageScore }}/10</div>
+              <div class="score-value">{{ formatScore(averageScore) }}/10</div>
             </div>
             <div class="performance-badge" [class.good]="performanceClass === 'good'"
               [class.warning]="performanceClass === 'warning'" [class.danger]="performanceClass === 'danger'"
@@ -104,7 +104,7 @@
               <circle class="ring-bg" cx="21" cy="21" r="15.5" />
               <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)"
                 [attr.stroke]="performanceClass === 'good' ? '#1f9d5f' : performanceClass === 'warning' ? '#f59e0b' : performanceClass === 'danger' ? '#dc2626' : '#1e3a8a'" />
-              <text x="21" y="22" class="ring-text" text-anchor="middle">{{ averageScore }}</text>
+              <text x="21" y="22" class="ring-text" text-anchor="middle">{{ formatScore(averageScore) }}</text>
               <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
             </svg>
           </ng-container>
@@ -114,6 +114,36 @@
             </div>
           </ng-template>
         </div>
+      </div>
+    </section>
+
+    <section class="overview-card attendance-summary-card" aria-label="Resumo de presença">
+      <div class="overview-body summary-body">
+        <div class="overview-left">
+          <div class="card-title">
+            <span class="material-icons">analytics</span>
+            <strong>Resumo de Presença</strong>
+          </div>
+          <div class="summary-items">
+            <div class="summary-item">
+              <span class="summary-label">Total registrado</span>
+              <strong>{{ formatNumber(attendanceSummary.totalCount) }}</strong>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Presenças (P)</span>
+              <strong>{{ formatNumber(attendanceSummary.present) }}</strong>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Faltas não justificadas (FNJ)</span>
+              <strong>{{ formatNumber(attendanceSummary.fnj) }}</strong>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Faltas justificadas (FJ)</span>
+              <strong>{{ formatNumber(attendanceSummary.fj) }}</strong>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
   </div>
