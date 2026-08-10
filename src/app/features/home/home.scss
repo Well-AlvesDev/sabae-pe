@@ -32,15 +32,16 @@ dashboard-shell mat-card {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #0c365c;
+  color: #2c2c2c;
   width: min(720px, 96%);
   margin: calc(72px + 12px) auto 10px;
 }
 
 .overview-title-row h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 400;
+  text-decoration: underline;
 }
 
 .overview-card {
@@ -63,9 +64,10 @@ dashboard-shell mat-card {
 
 .summary-body {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 18px;
 }
 
 .summary-items {
@@ -95,7 +97,7 @@ dashboard-shell mat-card {
 }
 
 .summary-graph {
-  width: 280px;
+  width: 100%;
 }
 
 .graph-title {
@@ -106,10 +108,11 @@ dashboard-shell mat-card {
 }
 
 .pie-chart-and-legend {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: 18px;
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
   align-items: center;
+  justify-content: center;
 }
 
 .pie-chart-wrapper {
@@ -145,40 +148,42 @@ dashboard-shell mat-card {
 .legend-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 6px 8px;
   background: #fbfbfb;
   border: 1px solid rgba(53, 53, 54, 0.557);
 }
 
 .legend-swatch {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .legend-swatch.present { background: #16a34a; }
 .legend-swatch.fnj { background: #ea580c; }
-.legend-swatch.fj { background: #447aed; }
+.legend-swatch.fj { background: #316be8; }
 
 .legend-label {
   color: #1f1f1f;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
   flex: 1 1 auto;
 }
 
 .legend-item strong {
   color: #242424;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .graph-bars {
@@ -225,7 +230,7 @@ dashboard-shell mat-card {
 
 .fill-present { background: #16a34a; }
 .fill-fnj { background: #ea580c; }
-.fill-fj { background: #2563eb; }
+.fill-fj { background: #316be8; }
 
 .graph-bar-value {
   color: #334155;
@@ -339,6 +344,9 @@ dashboard-shell mat-card {
   }
   .attendance-summary-card .summary-graph { width: 100%; }
   .summary-items { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pie-chart-and-legend {
+    flex-direction: column;
+  }
   
   .pie-chart-wrapper {
     margin: 0 auto;
