@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
   getTbdaCache,
@@ -14,7 +16,7 @@ import {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, MatCardModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, MatCardModule, RouterLink, RouterLinkActive, MatDialogModule, MatProgressSpinnerModule],
   templateUrl: './home.html',
   styleUrls: ['./home.scss'],
 })
@@ -44,8 +46,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   private authSub1: any;
   private authSub2: any;
   private loadingStart = Date.now();
+  private _logoutDialogOpen = false;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog) {}
 
   async ngOnInit(): Promise<void> {
     this.isLoadingProfile = true;
@@ -344,17 +347,26 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   async logout(): Promise<void> {
+    if (this._logoutDialogOpen) {
+      return;
+    }
+
+    this._logoutDialogOpen = true;
     try {
-      await Promise.all([
-        supabase.auth.signOut(),
-        supabaseWithSessionStorage.auth.signOut(),
-      ]);
-    } catch {}
-    try {
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.removeItem('supabase.auth.token');
-    } catch {}
-    this.router.navigate(['/login']);
+      const { LogoutConfirmDialogComponent } = await import('./logout-confirm.dialog');
+      const ref = this.dialog.open(LogoutConfirmDialogComponent, {
+        disableClose: true,
+        hasBackdrop: true,
+        width: '340px',
+        panelClass: 'legacy-logout-dialog',
+      });
+
+      try {
+        await ref.afterClosed().toPromise();
+      } catch {}
+    } finally {
+      this._logoutDialogOpen = false;
+    }
   }
 
   ngOnDestroy(): void {

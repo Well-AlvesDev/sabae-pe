@@ -10,7 +10,8 @@
   <div class="actions">
     <div class="profile-avatar" [class.loading]="isLoadingProfile" aria-label="Perfil do usuário">
       <span *ngIf="!isLoadingProfile">{{ avatarInitial }}</span>
-      <span *ngIf="isLoadingProfile" class="avatar-spinner" aria-hidden="true"></span>
+      <mat-progress-spinner *ngIf="isLoadingProfile" diameter="28" strokeWidth="3" mode="indeterminate"
+        aria-hidden="true"></mat-progress-spinner>
     </div>
     <button class="icon-button" aria-label="Notificações">
       <span class="material-icons">notifications</span>
@@ -68,6 +69,14 @@
   <div class="dashboard-shell">
     <div class="overview-title-row" aria-label="Visão Geral da Escola">
       <h2>Visão Geral da Escola:</h2>
+      <div class="overview-actions">
+        <p class="summary-last-search">Última busca: {{ lastSearchLabel || 'ainda não realizada' }}</p>
+        <button class="summary-refresh-button" type="button" (click)="refreshAttendanceData()"
+          [disabled]="isRefreshingAttendance">
+          <span class="material-icons">refresh</span>
+          <span>Atualizar</span>
+        </button>
+      </div>
     </div>
 
     <section class="overview-card" aria-label="Visão Geral da Escola">
@@ -79,9 +88,11 @@
           </div>
           <ng-container *ngIf="isLoadingAttendanceScore; else attendanceContent">
             <div class="card-loader" aria-label="Carregando avaliação de frequência">
-              <div class="loader-line short"></div>
-              <div class="loader-line long"></div>
-              <div class="loader-line badge"></div>
+              <div class="md-skeleton" aria-hidden="true">
+                <div class="skeleton-line title"></div>
+                <div class="skeleton-line short"></div>
+                <div class="skeleton-line badge"></div>
+              </div>
             </div>
           </ng-container>
           <ng-template #attendanceContent>
@@ -110,7 +121,8 @@
           </ng-container>
           <ng-template #ringLoading>
             <div class="ring-loader" aria-label="Carregando avaliação de frequência">
-              <span class="loader-spinner" aria-hidden="true"></span>
+              <mat-progress-spinner diameter="56" strokeWidth="4" mode="indeterminate"
+                aria-hidden="true"></mat-progress-spinner>
             </div>
           </ng-template>
         </div>
@@ -124,12 +136,6 @@
             <span class="material-icons">analytics</span>
             <strong>Resumo de Frequência</strong>
           </div>
-          <p class="summary-last-search">Última busca: {{ lastSearchLabel || 'ainda não realizada' }}</p>
-          <button class="summary-refresh-button" type="button" (click)="refreshAttendanceData()"
-            [disabled]="isRefreshingAttendance">
-            <span class="material-icons">refresh</span>
-            <span>Atualizar</span>
-          </button>
           <div class="summary-items">
             <div class="summary-item">
               <span class="summary-label">Total registrado</span>

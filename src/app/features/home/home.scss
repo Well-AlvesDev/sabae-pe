@@ -30,8 +30,9 @@ dashboard-shell mat-card {
 /* Overview card */
 .overview-title-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   color: #2c2c2c;
   width: min(720px, 96%);
   margin: calc(72px + 12px) auto 10px;
@@ -42,6 +43,21 @@ dashboard-shell mat-card {
   font-size: 18px;
   font-weight: 400;
   font-family: helvetica, sans-serif;
+}
+
+.overview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .overview-actions {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
 }
 
 .overview-card {
@@ -264,10 +280,11 @@ dashboard-shell mat-card {
   gap: 6px;
   padding: 6px 10px;
   color: #0c365c;
-  border-radius: 9px;
+  background: transparent;
   cursor: pointer;
   font-size: 12px;
   font-weight: 600;
+  max-width: 105px;
 }
 
 .summary-refresh-button:disabled {
@@ -301,6 +318,19 @@ dashboard-shell mat-card {
   gap: 10px;
   margin-top: 8px;
 }
+
+/* Material-like skeleton for attendance card */
+.md-skeleton { display:flex; flex-direction:column; gap:10px; }
+.skeleton-line {
+  height: 16px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: pulse 1.6s linear infinite;
+}
+.skeleton-line.title { width: 180px; height: 18px; }
+.skeleton-line.short { width: 120px; }
+.skeleton-line.badge { width: 140px; height: 22px; border-radius: 12px; }
 
 .loader-line {
   height: 16px;
