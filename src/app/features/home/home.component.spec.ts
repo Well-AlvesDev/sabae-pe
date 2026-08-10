@@ -29,4 +29,11 @@ describe('HomeComponent performance status', () => {
     expect(component.performanceLabel).toBe('Baixo desempenho');
     expect(component.performanceClass).toBe('danger');
   });
+
+  it('should show a loading placeholder while summary data is loading', () => {
+    expect(component.getSummaryDisplayValue(12, true)).toBe('Calculando...');
+    expect(component.getSummaryDisplayValue(12, true, '%')).toBe('Calculando...');
+    expect(component.getSummaryDisplayValue(12, false)).toBe('12');
+    expect(component.getSummaryDisplayValue(12, false, '%')).toBe('12%');
+  });
 });

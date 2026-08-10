@@ -12,12 +12,39 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 const TBDA_TABLE_NAME = 'TBDA';
 const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
 const TBDA_CACHE_KEY = 'sabae.tbda.cache';
+const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
+const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TBDA_SELECT = TBDA_COLUMNS.map((column) => `"${column}"`).join(',');
 
 type TbdaCachePayload = {
   timestamp: number;
   data: Record<string, unknown>[];
 };
+
+function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
+  const date = typeof value === 'number' ? new Date(value) : value;
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(date);
+}
+
+export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
+  const formatted = formatSaoPauloDateTime(value);
+  try {
+    localStorage.setItem(TBDA_LAST_SEARCH_KEY, formatted);
+  } catch {}
+  return formatted;
+}
+
+export function getTbdaLastSearchLabel(): string {
+  try {
+    return localStorage.getItem(TBDA_LAST_SEARCH_KEY) || '';
+  } catch {
+    return '';
+  }
+}
 
 export async function syncTbdaCache(useSessionStorage = false): Promise<Record<string, unknown>[]> {
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
@@ -32,12 +59,16 @@ export async function syncTbdaCache(useSessionStorage = false): Promise<Record<s
   const rows = Array.isArray(result.data)
     ? (result.data as unknown as Record<string, unknown>[])
     : [];
+  const requestedAt = Date.now();
   const payload: TbdaCachePayload = {
-    timestamp: Date.now(),
+    timestamp: requestedAt,
     data: rows,
   };
 
-  localStorage.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+  try {
+    localStorage.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+  } catch {}
+  setTbdaLastSearchLabel(requestedAt);
   return rows;
 }
 
@@ -54,6 +85,11 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
     }
 
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).data)) {
+      const cacheAge = Date.now() - Number((parsed as any).timestamp || 0);
+      if (cacheAge > TBDA_CACHE_TTL_MS) {
+        localStorage.removeItem(TBDA_CACHE_KEY);
+        return null;
+      }
       return (parsed as any).data as Record<string, unknown>[];
     }
 

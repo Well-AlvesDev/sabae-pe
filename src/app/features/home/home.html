@@ -67,7 +67,7 @@
 <div class="home-content">
   <div class="dashboard-shell">
     <div class="overview-title-row" aria-label="Visão Geral da Escola">
-      <h2>Visão de 360° graus como de um camaleão.</h2>
+      <h2>Visão Geral da Escola:</h2>
     </div>
 
     <section class="overview-card" aria-label="Visão Geral da Escola">
@@ -124,22 +124,28 @@
             <span class="material-icons">analytics</span>
             <strong>Resumo de Frequência</strong>
           </div>
+          <p class="summary-last-search">Última busca: {{ lastSearchLabel || 'ainda não realizada' }}</p>
+          <button class="summary-refresh-button" type="button" (click)="refreshAttendanceData()"
+            [disabled]="isRefreshingAttendance">
+            <span class="material-icons">refresh</span>
+            <span>Atualizar</span>
+          </button>
           <div class="summary-items">
             <div class="summary-item">
               <span class="summary-label">Total registrado</span>
-              <strong>{{ formatNumber(attendanceSummary.totalCount) }}</strong>
+              <strong>{{ getSummaryDisplayValue(attendanceSummary.totalCount, isLoadingAttendanceScore) }}</strong>
             </div>
             <div class="summary-item">
               <span class="summary-label">Presenças (P)</span>
-              <strong>{{ formatNumber(attendanceSummary.present) }}</strong>
+              <strong>{{ getSummaryDisplayValue(attendanceSummary.present, isLoadingAttendanceScore) }}</strong>
             </div>
             <div class="summary-item">
               <span class="summary-label">Faltas não justificadas (FNJ)</span>
-              <strong>{{ formatNumber(attendanceSummary.fnj) }}</strong>
+              <strong>{{ getSummaryDisplayValue(attendanceSummary.fnj, isLoadingAttendanceScore) }}</strong>
             </div>
             <div class="summary-item">
               <span class="summary-label">Faltas justificadas (FJ)</span>
-              <strong>{{ formatNumber(attendanceSummary.fj) }}</strong>
+              <strong>{{ getSummaryDisplayValue(attendanceSummary.fj, isLoadingAttendanceScore) }}</strong>
             </div>
           </div>
         </div>
@@ -158,17 +164,18 @@
               <div class="legend-item">
                 <span class="legend-swatch present"></span>
                 <span class="legend-label">Presenças</span>
-                <strong>{{ attendanceSummary.presentPct }}%</strong>
+                <strong>{{ getSummaryDisplayValue(attendanceSummary.presentPct, isLoadingAttendanceScore, '%')
+                  }}</strong>
               </div>
               <div class="legend-item">
                 <span class="legend-swatch fnj"></span>
                 <span class="legend-label">Faltas não justificadas</span>
-                <strong>{{ attendanceSummary.fnjPct }}%</strong>
+                <strong>{{ getSummaryDisplayValue(attendanceSummary.fnjPct, isLoadingAttendanceScore, '%') }}</strong>
               </div>
               <div class="legend-item">
                 <span class="legend-swatch fj"></span>
                 <span class="legend-label">Faltas justificadas</span>
-                <strong>{{ attendanceSummary.fjPct }}%</strong>
+                <strong>{{ getSummaryDisplayValue(attendanceSummary.fjPct, isLoadingAttendanceScore, '%') }}</strong>
               </div>
             </div>
           </div>

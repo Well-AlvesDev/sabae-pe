@@ -1,8 +1,15 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { getTbdaCache, syncTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import {
+  getTbdaCache,
+  getTbdaLastSearchLabel,
+  setTbdaLastSearchLabel,
+  syncTbdaCache,
+  supabase,
+  supabaseWithSessionStorage,
+} from '../../supabase';
 
 @Component({
   selector: 'app-home',
@@ -22,6 +29,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   public averageScore: number = 0;
   public performanceLabel: string = 'Carregando...';
   public performanceClass: 'good' | 'warning' | 'danger' | 'neutral' = 'neutral';
+  public lastSearchLabel = '';
+  public isRefreshingAttendance = false;
   public attendanceSummary = {
     totalCount: 0,
     present: 0,
@@ -36,12 +45,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   private authSub2: any;
   private loadingStart = Date.now();
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone) {}
 
   async ngOnInit(): Promise<void> {
     this.isLoadingProfile = true;
     this.isLoadingAttendanceScore = true;
     this.loadingStart = Date.now();
+    this.lastSearchLabel = getTbdaLastSearchLabel();
 
     try {
       const cachedRows = getTbdaCache();
@@ -99,6 +109,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             const rows = await syncTbdaCache(useSessionStorage);
             this.averageScore = this.computeAttendanceScore(rows);
             this.setPerformanceState(this.averageScore);
+            this.lastSearchLabel = setTbdaLastSearchLabel();
             console.debug('[home] TBDA cache synced successfully', { averageScore: this.averageScore, rows });
           }
         } catch (tbdaError) {
@@ -114,9 +125,18 @@ export class HomeComponent implements OnInit, OnDestroy {
       if (elapsed < 1000) {
         await new Promise<void>(resolve => setTimeout(resolve, 1000 - elapsed));
       }
-      this.isLoadingProfile = false;
-      this.isLoadingAttendanceScore = false;
-      try { this.cdr.detectChanges(); } catch {}
+      try {
+        this.ngZone.run(() => {
+          this.isLoadingProfile = false;
+          this.isLoadingAttendanceScore = false;
+        });
+        this.cdr.detectChanges();
+      } catch {}
+      setTimeout(() => {
+        try {
+          this.ngZone.run(() => {});
+        } catch {}
+      }, 16);
     }
 
     // also listen for auth state changes so name updates if session is set after navigation
@@ -246,11 +266,53 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.performanceClass = 'danger';
   }
 
+  public async refreshAttendanceData(): Promise<void> {
+    this.isRefreshingAttendance = true;
+    this.isLoadingAttendanceScore = true;
+    try {
+      try {
+        localStorage.removeItem('sabae.tbda.cache');
+      } catch {}
+
+      const [{ data: localData }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabaseWithSessionStorage.auth.getUser(),
+      ]);
+
+      const useSessionStorage = !!sessionData?.user && !localData?.user;
+      const rows = await syncTbdaCache(useSessionStorage);
+      this.averageScore = this.computeAttendanceScore(rows);
+      this.setPerformanceState(this.averageScore);
+      this.lastSearchLabel = setTbdaLastSearchLabel();
+    } catch (error) {
+      console.error('[home] failed to refresh attendance data', error);
+      this.performanceLabel = 'Não foi possível carregar a frequência';
+      this.performanceClass = 'neutral';
+    } finally {
+      this.isRefreshingAttendance = false;
+      this.isLoadingAttendanceScore = false;
+      try {
+        this.ngZone.run(() => {
+          this.cdr.detectChanges();
+        });
+      } catch {}
+    }
+  }
+
   public formatNumber(value: number): string {
     return Number(value).toLocaleString('pt-BR', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
+  }
+
+  public getSummaryDisplayValue(value: number, isLoading: boolean, suffix: string = ''): string {
+    if (isLoading) {
+      return 'Calculando...';
+    }
+
+    const formattedValue = this.formatNumber(value);
+    return suffix ? `${formattedValue}${suffix}` : formattedValue;
   }
 
   public get attendancePieStyle(): Record<string, string> {
