@@ -18,7 +18,7 @@ import {
   standalone: true,
   imports: [CommonModule, MatCardModule, RouterLink, RouterLinkActive, MatDialogModule, MatProgressSpinnerModule],
   templateUrl: './home.html',
-  styleUrls: ['./home.scss'],
+  styleUrls: ['./home.scss', './home-classroom.scss'],
 })
 export class HomeComponent implements OnInit, OnDestroy {
   public userName: string = 'usuário';
