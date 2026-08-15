@@ -42,6 +42,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     fnjPct: 0,
     fjPct: 0,
   };
+  public classroomSummary: Array<{
+    name: string;
+    total: number;
+    present: number;
+    fnj: number;
+    fj: number;
+    presentPct: number;
+    fnjPct: number;
+    fjPct: number;
+  }> = [];
   private readonly tbdaColumns = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   private authSub1: any;
   private authSub2: any;
@@ -180,6 +190,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private computeAttendanceScore(rows: Record<string, unknown>[]): number {
     const counts = this.extractAttendanceCounts(rows);
     this.updateAttendanceSummary(counts);
+    this.classroomSummary = this.buildClassroomSummary(rows);
 
     const totalForScore = counts.present + counts.fnj;
     if (totalForScore === 0) {
@@ -188,6 +199,76 @@ export class HomeComponent implements OnInit, OnDestroy {
 
    const score = (counts.present / totalForScore) * 10;
     return Math.floor(score * 100) / 100;
+  }
+
+  private buildClassroomSummary(rows: Record<string, unknown>[]) {
+    const summaryByClassroom = new Map<string, { present: number; fnj: number; fj: number }>();
+
+    for (const row of rows) {
+      const turma = this.getTurmaValue(row);
+      if (!summaryByClassroom.has(turma)) {
+        summaryByClassroom.set(turma, { present: 0, fnj: 0, fj: 0 });
+      }
+
+      const counts = summaryByClassroom.get(turma)!;
+      const valuesToCheck: unknown[] = [];
+
+      for (const column of this.tbdaColumns) {
+        if (Object.prototype.hasOwnProperty.call(row, column)) {
+          valuesToCheck.push(row[column]);
+        }
+      }
+
+      if (!valuesToCheck.length) {
+        const allValues = Object.entries(row)
+          .filter(([key]) => key !== 'TURMA' && key !== 'turma')
+          .map(([, value]) => value);
+        valuesToCheck.push(...allValues);
+      }
+
+      for (const value of valuesToCheck) {
+        if (value === null || value === undefined) {
+          continue;
+        }
+
+        const tokens = String(value)
+          .toUpperCase()
+          .split(/[^A-Z0-9]+/)
+          .filter(Boolean);
+
+        for (const token of tokens) {
+          if (token === 'P') counts.present += 1;
+          if (token === 'FNJ') counts.fnj += 1;
+          if (token === 'FJ') counts.fj += 1;
+        }
+      }
+    }
+
+    return Array.from(summaryByClassroom.entries())
+      .map(([name, counts]) => {
+        const total = counts.present + counts.fnj + counts.fj;
+        const presentPct = total ? Math.round((counts.present / total) * 100) : 0;
+        const fnjPct = total ? Math.round((counts.fnj / total) * 100) : 0;
+        const fjPct = total ? Math.round((counts.fj / total) * 100) : 0;
+
+        return {
+          name,
+          total,
+          present: counts.present,
+          fnj: counts.fnj,
+          fj: counts.fj,
+          presentPct,
+          fnjPct,
+          fjPct,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }
+
+  private getTurmaValue(row: Record<string, unknown>): string {
+    const rawValue = row['TURMA'] ?? row['turma'] ?? 'Sem turma';
+    const normalized = String(rawValue).trim();
+    return normalized || 'Sem turma';
   }
 
   private extractAttendanceCounts(rows: Record<string, unknown>[]) {
@@ -316,6 +397,13 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     const formattedValue = this.formatNumber(value);
     return suffix ? `${formattedValue}${suffix}` : formattedValue;
+  }
+
+  public getClassroomStatusLabel(classroom: { presentPct: number; fnjPct: number; fjPct: number }): string {
+    if (classroom.presentPct >= 84) return 'Ótimo';
+    if (classroom.presentPct >= 80) return 'Bom';
+    if (classroom.presentPct >= 76) return 'Regular';
+    return 'Atenção';
   }
 
   public get attendancePieStyle(): Record<string, string> {

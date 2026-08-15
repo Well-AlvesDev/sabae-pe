@@ -188,6 +188,49 @@
         </div>
       </div>
     </section>
+
+    <section class="overview-card classroom-card" aria-label="Situação da frequência por turma">
+      <div class="overview-body classroom-body">
+        <div class="card-title">
+          <span class="material-icons">school</span>
+          <strong>Situação por turma</strong>
+        </div>
+
+        <div class="classroom-list" *ngIf="classroomSummary.length; else noClassroomSummary">
+          <div class="classroom-item" *ngFor="let classroom of classroomSummary">
+            <div class="classroom-header">
+              <div class="classroom-meta">
+                <span class="classroom-name">{{ classroom.name }}</span>
+                <span class="classroom-total">{{ classroom.total }} registros</span>
+              </div>
+              <span class="classroom-status"
+                [ngClass]="{ 'good': getClassroomStatusLabel(classroom) === 'Ótimo' || getClassroomStatusLabel(classroom) === 'Bom', 'warning': getClassroomStatusLabel(classroom) === 'Regular', 'danger': getClassroomStatusLabel(classroom) === 'Atenção' }">
+                {{ getClassroomStatusLabel(classroom) }}
+              </span>
+            </div>
+
+            <div class="classroom-metrics">
+              <span>P: {{ classroom.present }}</span>
+              <span>FNJ: {{ classroom.fnj }}</span>
+              <span>FJ: {{ classroom.fj }}</span>
+            </div>
+
+            <div class="classroom-bar" aria-label="Distribuição da turma {{ classroom.name }}">
+              <span class="bar present" [style.width.%]="classroom.presentPct"></span>
+              <span class="bar fnj" [style.width.%]="classroom.fnjPct"></span>
+              <span class="bar fj" [style.width.%]="classroom.fjPct"></span>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noClassroomSummary>
+          <div class="classroom-empty">
+            <span class="material-icons">info</span>
+            <span>Sem dados de turma disponíveis no momento.</span>
+          </div>
+        </ng-template>
+      </div>
+    </section>
   </div>
 </div>
 

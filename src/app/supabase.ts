@@ -14,7 +14,7 @@ const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
 const TBDA_CACHE_KEY = 'sabae.tbda.cache';
 const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
-const TBDA_SELECT = TBDA_COLUMNS.map((column) => `"${column}"`).join(',');
+const TBDA_SELECT = ['"TURMA"', ...TBDA_COLUMNS.map((column) => `"${column}"`)].join(',');
 
 type TbdaCachePayload = {
   timestamp: number;
