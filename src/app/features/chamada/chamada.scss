@@ -7,66 +7,182 @@
 .chamada-content {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 104px 20px 96px;
+  padding: 96px 20px 118px;
 }
 
-.chamada-card {
+.chamada-panel {
   width: min(560px, 100%);
-  background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 12px 28px rgba(15, 77, 145, 0.12);
-  padding: 28px 24px;
+  min-width: 0;
+  padding: 0 0 24px;
+}
+
+.chamada-panel h1 {
+  margin: 0 0 42px;
+  color: #263746;
+  font-size: clamp(2rem, 2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
   text-align: center;
 }
 
-.eyebrow {
-  display: inline-block;
-  margin-bottom: 8px;
-  color: #0f4d91;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.field-group {
+  margin-bottom: 40px;
 }
 
-.chamada-card h1 {
-  margin: 0;
-  color: #0c365c;
-  font-size: clamp(2rem, 4vw, 2.75rem);
+.date-heading {
+  display: block;
+  color: #111820;
+  font-size: 1.2rem;
+  line-height: 1.3;
 }
 
-.chamada-card p {
-  margin: 12px 0 0;
-  color: #475569;
-  font-size: 1rem;
-  line-height: 1.6;
+.material-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 12px;
+  --mat-form-field-container-height: 48px;
+  --mat-form-field-container-vertical-padding: 10px;
 }
 
-.chamada-actions {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 24px;
+:host ::ng-deep .material-select .mat-mdc-form-field-subscript-wrapper {
+  display: none;
 }
 
-.primary-button,
-.secondary-button {
-  border: 0;
-  border-radius: 10px;
-  font-weight: 700;
-  padding: 12px 20px;
-  cursor: pointer;
+:host ::ng-deep .material-select .mat-mdc-text-field-wrapper {
+  height: 48px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(21, 34, 48, 0.12);
+}
+
+:host ::ng-deep .material-select .mat-mdc-form-field-infix {
+  min-height: 48px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+:host ::ng-deep .material-select .mat-mdc-select-value,
+:host ::ng-deep .material-select .mat-mdc-select-placeholder {
+  overflow: hidden;
+  color: #263746;
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .material-select .mat-mdc-select-arrow {
+  color: #3478c8;
+}
+
+.date-heading {
+  margin-bottom: 0;
+}
+
+.date-field .material-select {
+  margin-top: 6px;
+}
+
+.date-group {
+  margin-bottom: 38px;
+}
+
+.date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 12px;
+}
+
+.date-field {
+  min-width: 0;
 }
 
 .primary-button {
-  background: #0f4d91;
-  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 38px;
+  border: 1px solid #5bc76b;
+  border-radius: 10px;
+  background: transparent;
+  color: #15952d;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 4px 16px;
+  transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
 }
 
-.secondary-button {
-  background: #e2e8f0;
-  color: #0f172a;
+.primary-button:hover:not(:disabled) {
+  background: #eaf8ec;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.primary-button .material-icons {
+  font-size: 20px;
+}
+
+@media (max-width: 560px) {
+  .chamada-content {
+    padding: 96px 16px 118px;
+  }
+
+  .chamada-panel h1 {
+    margin-bottom: 36px;
+    font-size: 1.75rem;
+  }
+
+  .date-heading {
+    font-size: 1.1rem;
+  }
+
+  .date-fields {
+    gap: 12px;
+  }
+
+  :host ::ng-deep .material-select .mat-mdc-select-value,
+  :host ::ng-deep .material-select .mat-mdc-select-placeholder {
+    font-size: 0.98rem;
+  }
+
+  .primary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 620px) {
+  .date-fields {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .date-field .material-select {
+    margin-top: 5px;
+  }
+}
+
+@media (max-width: 660px) {
+  .chamada-content {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .chamada-panel h1 {
+    font-size: 25px;
+  }
+
+  .primary-button {
+    gap: 6px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
 }

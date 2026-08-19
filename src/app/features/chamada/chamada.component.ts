@@ -1,6 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 import { supabase, supabaseWithSessionStorage } from '../../supabase';
@@ -8,12 +11,31 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 @Component({
   selector: 'app-chamada',
   standalone: true,
-  imports: [CommonModule, MatProgressSpinnerModule],
+  imports: [CommonModule, FormsModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule],
   templateUrl: './chamada.html',
   styleUrls: ['./chamada.scss'],
 })
 export class ChamadaComponent implements OnInit, OnDestroy {
   public isMenuOpen = false;
+  public selectedRoom = '';
+  public selectedMonth = 'Agosto';
+  public selectedDay = '18';
+  public readonly rooms = ['Sala 1', 'Sala 2', 'Sala 3'];
+  public readonly months = [
+    'Janeiro',
+    'Fevereiro',
+    'Março',
+    'Abril',
+    'Maio',
+    'Junho',
+    'Julho',
+    'Agosto',
+    'Setembro',
+    'Outubro',
+    'Novembro',
+    'Dezembro',
+  ];
+  public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
   public userEmail = 'example@gmail.com';
   public avatarInitial = 'U';

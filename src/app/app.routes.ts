@@ -1,21 +1,21 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './features/login/login';
-import { HomeComponent } from './features/home/home.component';
-import { ChamadaComponent } from './features/chamada/chamada.component';
 import { authGuard } from './auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', component: LoginComponent },
+  {
+    path: 'login',
+    loadComponent: () => import('./features/login/login').then(m => m.LoginComponent),
+  },
   {
     path: 'home',
-    component: HomeComponent,
+    loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent),
     canActivate: [authGuard],
     data: { reuse: true },
   },
   {
     path: 'chamada',
-    component: ChamadaComponent,
+    loadComponent: () => import('./features/chamada/chamada.component').then(m => m.ChamadaComponent),
     canActivate: [authGuard],
     data: { reuse: true },
   },

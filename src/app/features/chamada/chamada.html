@@ -66,15 +66,49 @@
 </nav>
 
 <main class="chamada-content">
-    <section class="chamada-card" aria-label="Página de chamada">
-        <span class="eyebrow">SABAE</span>
-        <h1>Chamada</h1>
-        <p>Controle a presença dos alunos e mantenha o acompanhamento em tempo real.</p>
+    <section class="chamada-panel" aria-labelledby="chamada-title">
+        <h1 id="chamada-title">Registrar/Editar Chamada</h1>
 
-        <div class="chamada-actions">
-            <button class="primary-button" type="button">Nova chamada</button>
-            <button class="secondary-button" type="button">Sem dados</button>
+        <div class="field-group">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Selecione a Sala</mat-label>
+                <mat-select id="room" panelClass="compact-select-panel" [(ngModel)]="selectedRoom"
+                    aria-label="Selecione a sala">
+                    <mat-option value="">-- Selecione uma sala --</mat-option>
+                    <mat-option *ngFor="let room of rooms" [value]="room">{{ room }}</mat-option>
+                </mat-select>
+            </mat-form-field>
         </div>
+
+        <div class="field-group date-group">
+            <div class="date-heading">Selecione a Data:</div>
+            <div class="date-fields">
+                <div class="date-field">
+                    <mat-form-field class="material-select" appearance="outline">
+                        <mat-label>Mês</mat-label>
+                        <mat-select id="month" panelClass="compact-select-panel" [(ngModel)]="selectedMonth"
+                            aria-label="Selecione o mês">
+                            <mat-option *ngFor="let month of months" [value]="month">{{ month }}</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+
+                <div class="date-field">
+                    <mat-form-field class="material-select" appearance="outline">
+                        <mat-label>Dia</mat-label>
+                        <mat-select id="day" panelClass="compact-day-select-panel" [(ngModel)]="selectedDay"
+                            aria-label="Selecione o dia">
+                            <mat-option *ngFor="let day of days" [value]="day">{{ day }}</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+            </div>
+        </div>
+
+        <button class="primary-button" type="button" [disabled]="!selectedRoom">
+            <span class="material-icons" aria-hidden="true">check</span>
+            <span>Iniciar Registro/Edição</span>
+        </button>
     </section>
 </main>
 

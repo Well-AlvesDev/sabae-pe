@@ -29,6 +29,17 @@ body {
   box-sizing: border-box;
 }
 
+.compact-select-panel .mat-mdc-option {
+  min-height: 36px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.compact-day-select-panel {
+  max-height: 220px !important;
+  overflow-y: auto !important;
+}
+
 /* Global Layout - Top App Bar */
 .top-app-bar {
   position: fixed;
