@@ -5,7 +5,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
-  getTbdaCache,
+  ensureTbdaCache,
   getTbdaLastSearchLabel,
   setTbdaLastSearchLabel,
   syncTbdaCache,
@@ -67,14 +67,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.lastSearchLabel = getTbdaLastSearchLabel();
 
     try {
-      const cachedRows = getTbdaCache();
-      console.debug('[home] cachedRows', { cachedRows });
-      if (cachedRows && cachedRows.length) {
-        this.averageScore = this.computeAttendanceScore(cachedRows);
-        this.setPerformanceState(this.averageScore);
-        console.debug('[home] loaded TBDA from cache before auth check', { averageScore: this.averageScore });
-      }
-
       const [{ data: localData }, { data: sessionData }] = await Promise.all([
         supabase.auth.getUser(),
         supabaseWithSessionStorage.auth.getUser(),
@@ -111,20 +103,12 @@ export class HomeComponent implements OnInit, OnDestroy {
         console.debug('[home] resolved userName', this.userName);
 
         try {
-          const cachedRows = getTbdaCache();
-          console.debug('[home] cachedRows', { cachedRows });
-          if (cachedRows && cachedRows.length) {
-            this.averageScore = this.computeAttendanceScore(cachedRows);
-            this.setPerformanceState(this.averageScore);
-            console.debug('[home] loaded TBDA from cache', { averageScore: this.averageScore, cachedRows });
-          } else {
-            const useSessionStorage = !!sessionData?.user && !localData?.user;
-            const rows = await syncTbdaCache(useSessionStorage);
-            this.averageScore = this.computeAttendanceScore(rows);
-            this.setPerformanceState(this.averageScore);
-            this.lastSearchLabel = setTbdaLastSearchLabel();
-            console.debug('[home] TBDA cache synced successfully', { averageScore: this.averageScore, rows });
-          }
+          const useSessionStorage = !!sessionData?.user && !localData?.user;
+          const rows = await ensureTbdaCache(useSessionStorage);
+          this.averageScore = this.computeAttendanceScore(rows);
+          this.setPerformanceState(this.averageScore);
+          this.lastSearchLabel = getTbdaLastSearchLabel();
+          console.debug('[home] TBDA cache ensured successfully', { averageScore: this.averageScore, rows });
         } catch (tbdaError) {
           console.error('[home] failed to sync TBDA cache', tbdaError);
           this.performanceLabel = 'Não foi possível carregar a frequência';

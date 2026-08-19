@@ -1,3 +1,9 @@
+<div class="data-loading-overlay" *ngIf="isLoadingAttendanceData" role="status" aria-live="polite"
+    aria-label="Obtendo informações">
+    <mat-progress-spinner diameter="56" strokeWidth="4" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
+    <span>Obtendo informações...</span>
+</div>
+
 <header class="top-app-bar" role="banner" aria-label="Barra superior">
     <div class="leading">
         <button class="icon-button menu-button" aria-label="Abrir menu" type="button" (click)="toggleMenu()">
@@ -74,7 +80,9 @@
                 <mat-label>Selecione a Sala</mat-label>
                 <mat-select id="room" panelClass="compact-select-panel" [(ngModel)]="selectedRoom"
                     aria-label="Selecione a sala">
-                    <mat-option value="">-- Selecione uma sala --</mat-option>
+                    <mat-select-trigger>
+                        {{ selectedRoom || '-- Selecione uma sala --' }}
+                    </mat-select-trigger>
                     <mat-option *ngFor="let room of rooms" [value]="room">{{ room }}</mat-option>
                 </mat-select>
             </mat-form-field>

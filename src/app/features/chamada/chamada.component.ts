@@ -6,7 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
-import { supabase, supabaseWithSessionStorage } from '../../supabase';
+import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-chamada',
@@ -17,10 +17,7 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 })
 export class ChamadaComponent implements OnInit, OnDestroy {
   public isMenuOpen = false;
-  public selectedRoom = '';
-  public selectedMonth = 'Agosto';
-  public selectedDay = '18';
-  public readonly rooms = ['Sala 1', 'Sala 2', 'Sala 3'];
+  private readonly today = new Date();
   public readonly months = [
     'Janeiro',
     'Fevereiro',
@@ -35,11 +32,16 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     'Novembro',
     'Dezembro',
   ];
+  public selectedRoom = '';
+  public selectedMonth = this.months[this.today.getMonth()];
+  public selectedDay = String(this.today.getDate());
+  public readonly rooms = ['Sala 1', 'Sala 2', 'Sala 3'];
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
   public userEmail = 'example@gmail.com';
   public avatarInitial = 'U';
   public isLoadingProfile = true;
+  public isLoadingAttendanceData = true;
   private authSub1: any;
   private authSub2: any;
 
@@ -85,6 +87,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       if (user) {
         this.updateProfile(user);
       }
+
+      await ensureTbdaCache(!!sessionSessionData?.session && !localSessionData?.session);
     } catch {
       // Keep the fallback profile when authentication data is unavailable.
     } finally {
@@ -94,6 +98,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       }
 
       this.isLoadingProfile = false;
+  this.isLoadingAttendanceData = false;
       this.cdr.detectChanges();
     }
 

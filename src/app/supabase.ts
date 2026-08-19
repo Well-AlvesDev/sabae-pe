@@ -15,6 +15,7 @@ const TBDA_CACHE_KEY = 'sabae.tbda.cache';
 const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TBDA_SELECT = ['"TURMA"', ...TBDA_COLUMNS.map((column) => `"${column}"`)].join(',');
+let tbdaCacheSyncPromise: Promise<Record<string, unknown>[]> | null = null;
 
 type TbdaCachePayload = {
   timestamp: number;
@@ -70,6 +71,21 @@ export async function syncTbdaCache(useSessionStorage = false): Promise<Record<s
   } catch {}
   setTbdaLastSearchLabel(requestedAt);
   return rows;
+}
+
+export async function ensureTbdaCache(useSessionStorage = false): Promise<Record<string, unknown>[]> {
+  const cachedRows = getTbdaCache();
+  if (cachedRows && cachedRows.length) {
+    return cachedRows;
+  }
+
+  if (!tbdaCacheSyncPromise) {
+    tbdaCacheSyncPromise = syncTbdaCache(useSessionStorage).finally(() => {
+      tbdaCacheSyncPromise = null;
+    });
+  }
+
+  return tbdaCacheSyncPromise;
 }
 
 export function getTbdaCache(): Record<string, unknown>[] | null {

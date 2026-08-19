@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Router, UrlTree } from '@angular/router';
-import { supabase, supabaseWithSessionStorage } from './supabase';
+import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from './supabase';
 
 export async function authGuard(): Promise<boolean | UrlTree> {
   const router = inject(Router);
@@ -17,6 +17,10 @@ export async function authGuard(): Promise<boolean | UrlTree> {
   if (!hasSession || hasError) {
     return router.parseUrl('/');
   }
+
+  void ensureTbdaCache(!!sessionData?.session && !localData?.session).catch(error => {
+    console.error('[authGuard] failed to ensure TBDA cache', error);
+  });
 
   return true;
 }
