@@ -41,8 +41,11 @@ dashboard-shell mat-card {
 .overview-title-row h2 {
   margin: 0;
   font-size: 18px;
+  color: #f6fbff;
   font-weight: 400;
   font-family: helvetica, sans-serif;
+  background: #0c365c;
+  padding: 6px 20px;
 }
 
 .overview-actions {

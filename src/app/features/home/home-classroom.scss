@@ -32,15 +32,20 @@
 
 .classroom-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.classroom-status {
+  order: 1;
 }
 
 .classroom-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  order: 2;
 }
 
 .classroom-name {
@@ -104,14 +109,79 @@
   font-size: 13px;
 }
 
+/* ========================================
+   RESPONSIVIDADE AVANÇADA
+   Regras de distribuição inteligente para
+   diferentes tamanhos de tela
+   ======================================== */
+
+/* ========== DESKTOP (4 colunas) ========== */
+
+/* Desktop: 1 card na última linha (remainder = 1)
+   Regra: 1 desce (3 + 2)
+   Grupo 1 (cards 0-2): últimos ocupa 2 colunas
+   Grupo 2 (cards 3-4): últimos ocupa 3 colunas para preencher 4 */
+.desktop-last-single-pull,
+.desktop-last-single-bottom {
+  &:nth-child(3) { grid-column: span 2; }   // Card 2 - último do grupo 1
+  &:nth-child(5) { grid-column: span 3; }   // Card 4 - último do grupo 2
+}
+
+/* Desktop: 2 cards na última linha (remainder = 2)
+   Regra: 1 desce (3 + 3)
+   Cada grupo de 3: último ocupa 2 colunas */
+.desktop-last-pair-pull,
+.desktop-last-pair-bottom {
+  &:nth-child(3) { grid-column: span 2; }   // Card 2 - último do grupo 1
+  &:nth-child(6) { grid-column: span 2; }   // Card 5 - último do grupo 2
+}
+
+/* Desktop: 3 cards na última linha (remainder = 3)
+   Regra: todos se ajustam (4 + 3)
+   Grupo 1 mantém 4, Grupo 2 tem 3 cards com último ocupando 2 */
+.desktop-last-triple {
+  &:nth-child(7) { grid-column: span 2; }   // Card 6 - último do grupo 2
+}
+
+/* ========== TABLET (3 colunas) ========== */
+
 @media (max-width: 900px) {
   .classroom-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  /* Tablet: 2 cards na última linha (remainder = 2)
+     Regra: ambos ocupam 3 colunas
+     Card 1 (span 1), Card 2 (span 2) */
+  .tablet-last-pair {
+    &:nth-last-child(2) { grid-column: span 1; }
+    &:nth-last-child(1) { grid-column: span 2; }
+  }
+
+  /* Tablet: 1 card na última linha (remainder = 1)
+     Regra: 1 desce (2 + 2)
+     Cada grupo de 2: card 1 (span 1), card 2 (span 2) */
+  .tablet-last-single-pull,
+  .tablet-last-single-bottom {
+    &:nth-child(2) { grid-column: span 2; }   // Card 1 - último do grupo 1
+    &:nth-child(4) { grid-column: span 2; }   // Card 3 - último do grupo 2
+  }
 }
+
+/* ========== MOBILE (2 colunas) ========== */
 
 @media (max-width: 640px) {
   .classroom-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* Mobile: número ímpar de cards (remainder = 1)
+     Regra: o último card ocupa 2 colunas (span 2) */
+  .mobile-last-odd {
+    &:nth-last-child(1) {
+      grid-column: span 2;
+    }
+  }
 }
+
+

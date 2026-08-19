@@ -197,7 +197,8 @@
         </div>
 
         <div class="classroom-list" *ngIf="classroomSummary.length; else noClassroomSummary">
-          <div class="classroom-item" *ngFor="let classroom of classroomSummary">
+          <div [ngClass]="getClassroomItemClasses(i, classroomSummary.length)"
+            *ngFor="let classroom of classroomSummary; let i = index">
             <div class="classroom-header">
               <div class="classroom-meta">
                 <span class="classroom-name">{{ classroom.name }}</span>
@@ -240,10 +241,10 @@
     <span class="material-icons">home</span>
     <span class="label">Início</span>
   </a>
-  <a class="nav-item" href="#" aria-label="Chamada">
+  <button type="button" class="nav-item" (click)="goToChamada()" aria-label="Chamada">
     <span class="material-icons">assignment</span>
     <span class="label">Chamada</span>
-  </a>
+  </button>
   <a class="nav-item" href="#" aria-label="Relatórios">
     <span class="material-icons">bar_chart</span>
     <span class="label">Relatórios</span>

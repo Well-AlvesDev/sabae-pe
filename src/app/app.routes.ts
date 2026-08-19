@@ -1,17 +1,23 @@
 import { Routes } from '@angular/router';
-import { MainLayoutComponent } from './core/layout/main-layout/main-layout';
 import { LoginComponent } from './features/login/login';
 import { HomeComponent } from './features/home/home.component';
+import { ChamadaComponent } from './features/chamada/chamada.component';
 import { authGuard } from './auth.guard';
 
 export const routes: Routes = [
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent },
   {
-    path: '',
-    component: MainLayoutComponent,
-    children: [
-      { path: '', component: LoginComponent },
-      { path: 'home', component: HomeComponent, canActivate: [authGuard] },
-      { path: '**', redirectTo: '' },
-    ],
+    path: 'home',
+    component: HomeComponent,
+    canActivate: [authGuard],
+    data: { reuse: true },
   },
+  {
+    path: 'chamada',
+    component: ChamadaComponent,
+    canActivate: [authGuard],
+    data: { reuse: true },
+  },
+  { path: '**', redirectTo: 'login' },
 ];

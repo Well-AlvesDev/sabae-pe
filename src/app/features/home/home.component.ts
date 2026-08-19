@@ -231,10 +231,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           continue;
         }
 
-        const tokens = String(value)
-          .toUpperCase()
-          .split(/[^A-Z0-9]+/)
-          .filter(Boolean);
+        const tokens = this.extractStatusTokens(value);
 
         for (const token of tokens) {
           if (token === 'P') counts.present += 1;
@@ -292,10 +289,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             continue;
           }
 
-          const tokens = String(value)
-            .toUpperCase()
-            .split(/[^A-Z0-9]+/)
-            .filter(Boolean);
+          const tokens = this.extractStatusTokens(value);
 
           for (const token of tokens) {
             if (token === 'P') {
@@ -314,6 +308,20 @@ export class HomeComponent implements OnInit, OnDestroy {
       },
       { present: 0, fnj: 0, fj: 0 },
     );
+  }
+
+  private extractStatusTokens(value: unknown): string[] {
+    const text = String(value ?? '')
+      .toUpperCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!text) {
+      return [];
+    }
+
+    const matches = text.match(/\b(P|FNJ|FJ):/g) ?? [];
+    return matches.map(match => match.replace(':', '').trim());
   }
 
   private updateAttendanceSummary(counts: { present: number; fnj: number; fj: number }): void {
@@ -434,6 +442,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isMenuOpen = false;
   }
 
+  public goToChamada(): void {
+    this.closeMenu();
+    this.router.navigateByUrl('/chamada');
+  }
+
   async logout(): Promise<void> {
     if (this._logoutDialogOpen) {
       return;
@@ -455,6 +468,48 @@ export class HomeComponent implements OnInit, OnDestroy {
     } finally {
       this._logoutDialogOpen = false;
     }
+  }
+
+  /**
+   * Calcula as classes de layout responsivo para um card baseado em sua posição
+   * Implementa as regras:
+   * - Mobile (2 cards/linha): ímpar ocupa 2 espaços
+   * - Tablet (3 cards/linha): 2 na última linha ocupam 3; 1 na última linha + 1 da anterior
+   * - Desktop (4 cards/linha): 1 na última linha + 1 da anterior; 2 na última linha + 1 da anterior
+   */
+  public getClassroomItemClasses(index: number, totalCards: number): Record<string, boolean> {
+    const positionFromEnd = totalCards - index;
+    
+    // Calcular restos para determinar quantos cards ficam na última linha de cada breakpoint
+    const remainderMobile = totalCards % 2; // 0 = par (normal), 1 = ímpar (último estica)
+    const remainderTablet = totalCards % 3; // 0 = normal, 1 = 1 card solitário, 2 = 2 cards solitários
+    const remainderDesktop = totalCards % 4; // 0 = normal, 1 = 1 card, 2 = 2 cards, 3 = 3 cards
+
+    return {
+      'classroom-item': true,
+      
+      // MOBILE: Se total é ímpar, o último card ocupa 2 colunas
+      'mobile-last-odd': remainderMobile === 1 && positionFromEnd === 1,
+      
+      // TABLET: Se há 2 cards na última linha, ambos ocupam 3 colunas (flex: 1)
+      'tablet-last-pair': remainderTablet === 2 && (positionFromEnd === 1 || positionFromEnd === 2),
+      
+      // TABLET: Se há 1 card na última linha, 1 desce da anterior (3 cards anteriores no grid)
+      // Os 3 cards devem redistribuir horizontalmente, e os últimos 2 vão para a próxima linha
+      'tablet-last-single-pull': remainderTablet === 1 && positionFromEnd === 3,
+      'tablet-last-single-bottom': remainderTablet === 1 && (positionFromEnd === 1 || positionFromEnd === 2),
+      
+      // DESKTOP: Se há 1 card na última linha, 1 desce da anterior
+      'desktop-last-single-pull': remainderDesktop === 1 && (positionFromEnd === 4 || positionFromEnd === 3 || positionFromEnd === 2),
+      'desktop-last-single-bottom': remainderDesktop === 1 && positionFromEnd === 1,
+      
+      // DESKTOP: Se há 2 cards na última linha, 1 desce da anterior
+      'desktop-last-pair-pull': remainderDesktop === 2 && (positionFromEnd === 3 || positionFromEnd === 2),
+      'desktop-last-pair-bottom': remainderDesktop === 2 && positionFromEnd === 1,
+      
+      // DESKTOP: Se há 3 cards na última linha, todos se reajustam
+      'desktop-last-triple': remainderDesktop === 3 && (positionFromEnd === 4 || positionFromEnd === 3 || positionFromEnd === 2 || positionFromEnd === 1),
+    };
   }
 
   ngOnDestroy(): void {

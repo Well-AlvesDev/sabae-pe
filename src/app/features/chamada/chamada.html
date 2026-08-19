@@ -1,0 +1,102 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+    <div class="leading">
+        <button class="icon-button menu-button" aria-label="Abrir menu" type="button" (click)="toggleMenu()">
+            <span class="material-icons">menu</span>
+        </button>
+        <div class="brand" aria-label="Logo da SABAE">
+            <img src="/sabae-max.png" alt="SABAE logo" class="app-bar-logo">
+        </div>
+    </div>
+
+    <div class="actions">
+        <div class="profile-avatar" [class.loading]="isLoadingProfile" aria-label="Perfil do usuário">
+            <span *ngIf="!isLoadingProfile">{{ avatarInitial }}</span>
+            <mat-progress-spinner *ngIf="isLoadingProfile" diameter="28" strokeWidth="3" mode="indeterminate"
+                aria-hidden="true"></mat-progress-spinner>
+        </div>
+        <button class="icon-button" aria-label="Notificações" type="button">
+            <span class="material-icons">notifications</span>
+        </button>
+    </div>
+</header>
+
+<div class="drawer-backdrop" *ngIf="isMenuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+<nav class="side-drawer" [class.open]="isMenuOpen" aria-label="Menu lateral">
+    <div class="drawer-header" style="background-image: url('/lines.png')">
+        <div class="drawer-overlay"></div>
+        <div class="drawer-profile">
+            <div class="drawer-avatar">{{ avatarInitial }}</div>
+            <div class="drawer-text">
+                <div class="drawer-title">ESCOLA DOM BOSCO</div>
+                <div class="drawer-subtitle">{{ userEmail }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="drawer-items">
+        <a class="drawer-item" href="#">
+            <span class="material-icons">favorite</span>
+            Favoritos
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">people</span>
+            Amigos
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">share</span>
+            Compartilhar
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">notifications</span>
+            Solicitação
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">settings</span>
+            Configurações
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">policy</span>
+            Políticas
+        </a>
+        <button class="drawer-item logout-button" type="button" (click)="logout()">
+            <span class="material-icons">exit_to_app</span>
+            Sair
+        </button>
+    </div>
+</nav>
+
+<main class="chamada-content">
+    <section class="chamada-card" aria-label="Página de chamada">
+        <span class="eyebrow">SABAE</span>
+        <h1>Chamada</h1>
+        <p>Controle a presença dos alunos e mantenha o acompanhamento em tempo real.</p>
+
+        <div class="chamada-actions">
+            <button class="primary-button" type="button">Nova chamada</button>
+            <button class="secondary-button" type="button">Sem dados</button>
+        </div>
+    </section>
+</main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+    <button type="button" class="nav-item" (click)="goToHome()" aria-label="Início">
+        <span class="material-icons">home</span>
+        <span class="label">Início</span>
+    </button>
+    <button type="button" class="nav-item active" aria-label="Chamada">
+        <span class="material-icons">assignment</span>
+        <span class="label">Chamada</span>
+    </button>
+    <a class="nav-item" href="#" aria-label="Relatórios">
+        <span class="material-icons">bar_chart</span>
+        <span class="label">Relatórios</span>
+    </a>
+    <a class="nav-item" href="#" aria-label="Alunos">
+        <span class="material-icons">people</span>
+        <span class="label">Alunos</span>
+    </a>
+    <a class="nav-item" href="#" aria-label="Perfil">
+        <span class="material-icons">account_circle</span>
+        <span class="label">Perfil</span>
+    </a>
+</nav>
