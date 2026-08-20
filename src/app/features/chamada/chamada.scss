@@ -174,7 +174,11 @@
   }
 
   .primary-button {
-    width: 100%;
+    display: flex;
+    width: min(100%, 300px);
+    max-width: 100%;
+    margin-right: auto;
+    margin-left: auto;
   }
 }
 

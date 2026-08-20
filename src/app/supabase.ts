@@ -88,6 +88,20 @@ export async function ensureTbdaCache(useSessionStorage = false): Promise<Record
   return tbdaCacheSyncPromise;
 }
 
+export function getTbdaClassrooms(rows: Record<string, unknown>[] | null = getTbdaCache()): string[] {
+  if (!rows) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      rows
+        .map(row => String(row['TURMA'] ?? row['turma'] ?? '').trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
 export function getTbdaCache(): Record<string, unknown>[] | null {
   try {
     const raw = localStorage.getItem(TBDA_CACHE_KEY);

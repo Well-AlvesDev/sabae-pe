@@ -6,7 +6,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
-import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { ensureTbdaCache, getTbdaClassrooms, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-chamada',
@@ -35,7 +35,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public selectedRoom = '';
   public selectedMonth = this.months[this.today.getMonth()];
   public selectedDay = String(this.today.getDate());
-  public readonly rooms = ['Sala 1', 'Sala 2', 'Sala 3'];
+  public rooms: string[] = [];
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
   public userEmail = 'example@gmail.com';
@@ -88,7 +88,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
         this.updateProfile(user);
       }
 
-      await ensureTbdaCache(!!sessionSessionData?.session && !localSessionData?.session);
+      const rows = await ensureTbdaCache(!!sessionSessionData?.session && !localSessionData?.session);
+      this.rooms = getTbdaClassrooms(rows);
     } catch {
       // Keep the fallback profile when authentication data is unavailable.
     } finally {
