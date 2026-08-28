@@ -27,7 +27,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public isLoadingProfile = true;
   public isLoadingAttendanceScore = true;
   public isMenuOpen = false;
-  public drawerBackgroundUrl = '/lines.png';
+  public drawerBackgroundUrl = '';
   public averageScore: number = 0;
   public performanceLabel: string = 'Carregando...';
   public performanceClass: 'good' | 'warning' | 'danger' | 'neutral' = 'neutral';
@@ -447,7 +447,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
 
       try {
-        await ref.afterClosed().toPromise();
+        const confirmed = await ref.afterClosed().toPromise();
+        if (confirmed === true) {
+          this.closeMenu();
+        }
       } catch {}
     } finally {
       this._logoutDialogOpen = false;

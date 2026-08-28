@@ -61,7 +61,7 @@
 
 <main class="chamada-content">
     <section class="chamada-panel" aria-labelledby="chamada-title">
-        <h1 id="chamada-title">Registrar/Editar Chamada</h1>
+        <h1 id="chamada-title">Registrar Chamada</h1>
 
         <div class="field-group">
             <mat-form-field class="material-select" appearance="outline">
@@ -101,12 +101,54 @@
             </div>
         </div>
 
-        <button class="primary-button" type="button" [disabled]="!selectedRoom">
+        <button class="primary-button" type="button" [disabled]="!selectedRoom" (click)="openAttendanceModal()">
             <span class="material-icons" aria-hidden="true">check</span>
-            <span>Iniciar Registro/Edição</span>
+            <span>Iniciar Registro</span>
         </button>
     </section>
 </main>
+
+<div class="attendance-modal-backdrop" *ngIf="isAttendanceModalOpen" (click)="closeAttendanceModal()">
+    <section class="attendance-modal" role="dialog" aria-modal="true" aria-labelledby="attendance-modal-title"
+        (click)="$event.stopPropagation()">
+        <header class="attendance-modal-header">
+            <div class="attendance-modal-title-row">
+                <h2 id="attendance-modal-title">Registrar Chamada - {{ selectedRoom }}</h2>
+                <button class="modal-close-button" type="button" aria-label="Fechar registro" (click)="closeAttendanceModal()">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <p>Dia/Mês: <strong>{{ selectedDay }}/{{ selectedMonth }}</strong></p>
+        </header>
+
+        <div class="attendance-modal-summary">
+            <span>Total de alunos:</span>
+            <strong>{{ students.length }}</strong>
+            <button class="save-button" type="button" (click)="closeAttendanceModal()">
+                <span class="material-icons" aria-hidden="true">save</span>
+                <span>Salvar</span>
+            </button>
+        </div>
+
+        <div class="student-list" role="list">
+            <article class="student-card" *ngFor="let student of students" role="listitem">
+                <div class="student-info">
+                    <strong>{{ student.name }}</strong>
+                    <span *ngIf="student.registration">Matrícula: {{ student.registration }}</span>
+                </div>
+                <div class="attendance-actions" role="group" [attr.aria-label]="'Frequência de ' + student.name">
+                    <button type="button" [class.selected-present]="student.status === 'P'"
+                        [attr.aria-pressed]="student.status === 'P'" (click)="setAttendanceStatus(student, 'P')">P</button>
+                    <button type="button" [class.selected-fnj]="student.status === 'FNJ'"
+                        [attr.aria-pressed]="student.status === 'FNJ'" (click)="setAttendanceStatus(student, 'FNJ')">FNJ</button>
+                    <button type="button" [class.selected-fj]="student.status === 'FJ'"
+                        [attr.aria-pressed]="student.status === 'FJ'" (click)="setAttendanceStatus(student, 'FJ')">FJ</button>
+                </div>
+            </article>
+            <p class="empty-students" *ngIf="!students.length">Nenhum aluno encontrado para esta sala.</p>
+        </div>
+    </section>
+</div>
 
 <nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
     <button type="button" class="nav-item" (click)="goToHome()" aria-label="Início">

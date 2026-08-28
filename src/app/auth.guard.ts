@@ -18,9 +18,11 @@ export async function authGuard(): Promise<boolean | UrlTree> {
     return router.parseUrl('/');
   }
 
-  void ensureTbdaCache(!!sessionData?.session && !localData?.session).catch(error => {
+  try {
+    await ensureTbdaCache(!!sessionData?.session && !localData?.session);
+  } catch (error) {
     console.error('[authGuard] failed to ensure TBDA cache', error);
-  });
+  }
 
   return true;
 }

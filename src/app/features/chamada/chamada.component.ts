@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
@@ -8,10 +9,18 @@ import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
 import { ensureTbdaCache, getTbdaClassrooms, supabase, supabaseWithSessionStorage } from '../../supabase';
 
+type AttendanceStatus = 'P' | 'FNJ' | 'FJ' | null;
+
+type StudentAttendance = {
+  name: string;
+  registration: string;
+  status: AttendanceStatus;
+};
+
 @Component({
   selector: 'app-chamada',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule],
   templateUrl: './chamada.html',
   styleUrls: ['./chamada.scss'],
 })
@@ -36,6 +45,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public selectedMonth = this.months[this.today.getMonth()];
   public selectedDay = String(this.today.getDate());
   public rooms: string[] = [];
+  public students: StudentAttendance[] = [];
+  public isAttendanceModalOpen = false;
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
   public userEmail = 'example@gmail.com';
@@ -44,8 +55,9 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public isLoadingAttendanceData = true;
   private authSub1: any;
   private authSub2: any;
+  private _logoutDialogOpen = false;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
   async ngOnInit(): Promise<void> {
     const loadingStart = Date.now();
@@ -89,6 +101,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       }
 
       const rows = await ensureTbdaCache(!!sessionSessionData?.session && !localSessionData?.session);
+      this.tbdaRows = rows;
       this.rooms = getTbdaClassrooms(rows);
     } catch {
       // Keep the fallback profile when authentication data is unavailable.
@@ -135,14 +148,52 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.router.navigateByUrl('/home');
   }
 
+  public openAttendanceModal(): void {
+    const selectedRoom = this.selectedRoom.trim();
+    this.students = this.tbdaRows
+      .filter(row => this.getRowText(row, 'TURMA') === selectedRoom)
+      .map(row => ({
+        name: this.getRowText(row, 'NOME'),
+        registration: this.getRowText(row, 'MATRICULA', 'MATRÍCULA'),
+        status: 'P' as const,
+      }))
+      .filter(student => student.name)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    this.isAttendanceModalOpen = true;
+  }
+
+  public closeAttendanceModal(): void {
+    this.isAttendanceModalOpen = false;
+  }
+
+  public setAttendanceStatus(student: StudentAttendance, status: Exclude<AttendanceStatus, null>): void {
+    student.status = status;
+  }
+
   public async logout(): Promise<void> {
-    try {
-      await Promise.all([supabase.auth.signOut(), supabaseWithSessionStorage.auth.signOut()]);
-    } catch {
-      // ignore
+    if (this._logoutDialogOpen) {
+      return;
     }
 
-    this.router.navigateByUrl('/login');
+    this._logoutDialogOpen = true;
+    try {
+      const { LogoutConfirmDialogComponent } = await import('../home/logout-confirm.dialog');
+      const ref = this.dialog.open(LogoutConfirmDialogComponent, {
+        disableClose: true,
+        hasBackdrop: true,
+        width: '340px',
+        panelClass: 'legacy-logout-dialog',
+      });
+
+      try {
+        const confirmed = await ref.afterClosed().toPromise();
+        if (confirmed === true) {
+          this.closeMenu();
+        }
+      } catch {}
+    } finally {
+      this._logoutDialogOpen = false;
+    }
   }
 
   ngOnDestroy(): void {
@@ -155,6 +206,18 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.userEmail = user.email || this.userEmail;
     this.avatarInitial = this.getAvatarInitial(this.userName);
     this.cdr.detectChanges();
+  }
+
+  private tbdaRows: Record<string, unknown>[] = [];
+
+  private getRowText(row: Record<string, unknown>, ...keys: string[]): string {
+    for (const key of keys) {
+      const value = row[key] ?? row[key.toLowerCase()];
+      if (value !== null && value !== undefined && String(value).trim()) {
+        return String(value).trim();
+      }
+    }
+    return '';
   }
 
   private formatUserName(user: any): string {
