@@ -60,8 +60,6 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
   async ngOnInit(): Promise<void> {
-    const loadingStart = Date.now();
-
     try {
       const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
         supabase.auth.getSession(),
@@ -106,13 +104,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     } catch {
       // Keep the fallback profile when authentication data is unavailable.
     } finally {
-      const elapsed = Date.now() - loadingStart;
-      if (elapsed < 1000) {
-        await new Promise<void>(resolve => setTimeout(resolve, 1000 - elapsed));
-      }
-
       this.isLoadingProfile = false;
-  this.isLoadingAttendanceData = false;
+      this.isLoadingAttendanceData = false;
       this.cdr.detectChanges();
     }
 
