@@ -25,7 +25,12 @@
     [ngStyle]="{ 'background-image': drawerBackgroundUrl ? 'url(' + drawerBackgroundUrl + ')' : 'none' }">
     <div class="drawer-overlay"></div>
     <div class="drawer-profile">
-      <div class="drawer-avatar">{{ avatarInitial }}</div>
+      <div class="drawer-avatar" [class.loading]="isLoadingProfile"
+        [attr.aria-label]="isLoadingProfile ? 'Carregando perfil do usuário' : 'Perfil do usuário'">
+        <span *ngIf="!isLoadingProfile">{{ avatarInitial }}</span>
+        <mat-progress-spinner *ngIf="isLoadingProfile" diameter="48" strokeWidth="3" mode="indeterminate"
+          aria-hidden="true"></mat-progress-spinner>
+      </div>
       <div class="drawer-text">
         <div class="drawer-title">ESCOLA DOM BOSCO</div>
         <div class="drawer-subtitle">{{ userEmail }}</div>

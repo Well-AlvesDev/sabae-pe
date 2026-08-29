@@ -22,7 +22,7 @@ import {
 })
 export class HomeComponent implements OnInit, OnDestroy {
   public userName: string = 'usuário';
-  public userEmail: string = 'example@gmail.com';
+  public userEmail: string = 'Obtendo usuário...';
   public avatarInitial: string = 'U';
   public isLoadingProfile = true;
   public isLoadingAttendanceScore = true;

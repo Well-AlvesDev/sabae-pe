@@ -31,7 +31,12 @@
     <div class="drawer-header" style="background-image: url('/lines.png')">
         <div class="drawer-overlay"></div>
         <div class="drawer-profile">
-            <div class="drawer-avatar">{{ avatarInitial }}</div>
+            <div class="drawer-avatar" [class.loading]="isLoadingProfile"
+                [attr.aria-label]="isLoadingProfile ? 'Carregando perfil do usuário' : 'Perfil do usuário'">
+                <span *ngIf="!isLoadingProfile">{{ avatarInitial }}</span>
+                <mat-progress-spinner *ngIf="isLoadingProfile" diameter="48" strokeWidth="3" mode="indeterminate"
+                    aria-hidden="true"></mat-progress-spinner>
+            </div>
             <div class="drawer-text">
                 <div class="drawer-title">ESCOLA DOM BOSCO</div>
                 <div class="drawer-subtitle">{{ userEmail }}</div>
@@ -114,7 +119,8 @@
         <header class="attendance-modal-header">
             <div class="attendance-modal-title-row">
                 <h2 id="attendance-modal-title">Registrar Chamada - {{ selectedRoom }}</h2>
-                <button class="modal-close-button" type="button" aria-label="Fechar registro" (click)="closeAttendanceModal()">
+                <button class="modal-close-button" type="button" aria-label="Fechar registro"
+                    (click)="closeAttendanceModal()">
                     <span class="material-icons" aria-hidden="true">close</span>
                 </button>
             </div>
@@ -138,11 +144,14 @@
                 </div>
                 <div class="attendance-actions" role="group" [attr.aria-label]="'Frequência de ' + student.name">
                     <button type="button" [class.selected-present]="student.status === 'P'"
-                        [attr.aria-pressed]="student.status === 'P'" (click)="setAttendanceStatus(student, 'P')">P</button>
+                        [attr.aria-pressed]="student.status === 'P'"
+                        (click)="setAttendanceStatus(student, 'P')">P</button>
                     <button type="button" [class.selected-fnj]="student.status === 'FNJ'"
-                        [attr.aria-pressed]="student.status === 'FNJ'" (click)="setAttendanceStatus(student, 'FNJ')">FNJ</button>
+                        [attr.aria-pressed]="student.status === 'FNJ'"
+                        (click)="setAttendanceStatus(student, 'FNJ')">FNJ</button>
                     <button type="button" [class.selected-fj]="student.status === 'FJ'"
-                        [attr.aria-pressed]="student.status === 'FJ'" (click)="setAttendanceStatus(student, 'FJ')">FJ</button>
+                        [attr.aria-pressed]="student.status === 'FJ'"
+                        (click)="setAttendanceStatus(student, 'FJ')">FJ</button>
                 </div>
             </article>
             <p class="empty-students" *ngIf="!students.length">Nenhum aluno encontrado para esta sala.</p>

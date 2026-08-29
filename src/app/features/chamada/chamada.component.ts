@@ -49,7 +49,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public isAttendanceModalOpen = false;
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
-  public userEmail = 'example@gmail.com';
+  public userEmail = 'Obtendo usuário...';
   public avatarInitial = 'U';
   public isLoadingProfile = true;
   public isLoadingAttendanceData = true;

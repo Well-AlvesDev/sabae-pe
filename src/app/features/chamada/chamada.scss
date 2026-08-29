@@ -159,17 +159,20 @@
   justify-content: center;
   padding: 24px;
   background: rgba(17, 24, 32, 0.48);
+  overflow: hidden;
 }
 
 .attendance-modal {
   display: flex;
   width: min(620px, 100%);
+  max-width: 100%;
   max-height: min(760px, calc(100vh - 48px));
   flex-direction: column;
   overflow: hidden;
   border-radius: 10px;
   background: #f8fafc;
   box-shadow: 0 6px 18px rgba(15, 35, 55, 0.12);
+  box-sizing: border-box;
 }
 
 .attendance-modal-header {
@@ -450,5 +453,55 @@
     gap: 6px;
     padding-right: 10px;
     padding-left: 10px;
+  }
+}
+
+/* Extra small screens: Ensure modal fits without overflow */
+@media (max-width: 380px) {
+  .attendance-modal-backdrop {
+    padding: 8px;
+  }
+
+  .attendance-modal {
+    width: min(100%, 100%);
+    max-width: calc(100vw - 16px);
+  }
+
+  .attendance-modal-header {
+    padding: 12px 12px 0;
+  }
+
+  .attendance-modal-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .attendance-modal-header p {
+    margin: 12px 0 0;
+    padding: 6px 12px;
+    font-size: 0.82rem;
+  }
+
+  .attendance-modal-summary {
+    min-height: 56px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .student-list {
+    padding: 10px 8px 12px;
+  }
+
+  .student-card {
+    padding: 8px 10px;
+    margin-bottom: 8px;
+  }
+
+  .attendance-actions {
+    flex-basis: auto;
+  }
+
+  .attendance-actions button {
+    min-height: 36px;
+    font-size: 0.8rem;
   }
 }
