@@ -354,11 +354,11 @@
   }
 
   .attendance-modal-backdrop {
-    padding: 12px;
+    padding: 16px;
   }
 
   .attendance-modal {
-    max-height: calc(100vh - 24px);
+    max-height: calc(100vh - 80px);
   }
 
   .attendance-modal-header {
@@ -459,12 +459,13 @@
 /* Extra small screens: Ensure modal fits without overflow */
 @media (max-width: 380px) {
   .attendance-modal-backdrop {
-    padding: 8px;
+    padding: 20px 8px;
   }
 
   .attendance-modal {
     width: min(100%, 100%);
     max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 100px);
   }
 
   .attendance-modal-header {
