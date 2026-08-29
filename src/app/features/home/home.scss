@@ -1,7 +1,15 @@
+:host {
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+  background: #f4f7fb;
+}
+
 .dashboard-shell {
   display: block;
   min-height: auto;
   padding: 0;
+  overflow: hidden;
 }
 
 dashboard-shell mat-card {
@@ -11,6 +19,10 @@ dashboard-shell mat-card {
 .home-content {
   padding-top: 0;
   padding-bottom: calc(24px + 72px);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .logo-container {

@@ -1,6 +1,7 @@
 :host {
   display: block;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f4f7fb;
 }
 
@@ -24,11 +25,14 @@
 }
 
 .chamada-content {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 96px 20px 118px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chamada-panel {
