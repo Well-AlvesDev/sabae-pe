@@ -174,7 +174,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       const ref = this.dialog.open(LogoutConfirmDialogComponent, {
         disableClose: true,
         hasBackdrop: true,
-        width: '340px',
+        maxWidth: 'calc(100vw - 32px)',
         panelClass: 'legacy-logout-dialog',
       });
 
