@@ -166,7 +166,7 @@
   display: flex;
   width: min(620px, 100%);
   max-width: 100%;
-  max-height: min(760px, calc(100vh - 48px));
+  max-height: calc(100vh - 60px);
   flex-direction: column;
   overflow: hidden;
   border-radius: 10px;
@@ -436,6 +436,28 @@
 
   .date-field .material-select {
     margin-top: 5px;
+  }
+}
+
+/* Tablet: 561px to 767px */
+@media (min-width: 561px) and (max-width: 767px) {
+  .attendance-modal-backdrop {
+    padding: 20px;
+  }
+
+  .attendance-modal {
+    max-height: calc(100vh - 100px);
+  }
+}
+
+/* Desktop: 768px and above */
+@media (min-width: 768px) {
+  .attendance-modal-backdrop {
+    padding: 24px;
+  }
+
+  .attendance-modal {
+    max-height: calc(100vh - 80px);
   }
 }
 
