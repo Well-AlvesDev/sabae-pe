@@ -70,11 +70,11 @@
 
         <div class="field-group">
             <mat-form-field class="material-select" appearance="outline">
-                <mat-label>Selecione a Sala</mat-label>
+                <mat-label>Selecione a Série</mat-label>
                 <mat-select id="room" panelClass="compact-select-panel" [(ngModel)]="selectedRoom"
-                    aria-label="Selecione a sala">
+                    aria-label="Selecione a série">
                     <mat-select-trigger>
-                        {{ selectedRoom || '-- Selecione uma sala --' }}
+                        {{ selectedRoom || '-- Selecione uma série --' }}
                     </mat-select-trigger>
                     <mat-option *ngFor="let room of rooms" [value]="room">{{ room }}</mat-option>
                 </mat-select>
@@ -110,6 +110,47 @@
             <span class="material-icons" aria-hidden="true">check</span>
             <span>Iniciar Registro</span>
         </button>
+
+        <div class="saved-attendance-list" *ngIf="savedAttendances.length">
+            <div class="saved-attendance-header-block">
+                <div class="saved-attendance-title-wrap">
+                    <span class="saved-attendance-title-icon material-icons" aria-hidden="true">cloud_upload</span>
+                    <h2>Prontas para envio</h2>
+                </div>
+            </div>
+
+            <button class="saved-attendance-send-button" type="button">Enviar para o Banco</button>
+
+            <article class="saved-attendance-card" *ngFor="let attendance of savedAttendances">
+                <div class="saved-attendance-topline">
+                    <strong class="saved-attendance-title">{{ getSavedAttendanceTitle(attendance) }}</strong>
+                </div>
+
+                <div class="saved-attendance-date">{{ formatSavedAttendanceDate(attendance) }}</div>
+
+                <div class="saved-attendance-meta">
+                    Registrada em: {{ formatSavedAttendanceTimestamp(attendance.savedAt) }}
+                </div>
+
+                <div class="saved-attendance-action-row">
+                    <button class="saved-attendance-edit" type="button" aria-label="Editar chamada">
+                        <span class="material-icons" aria-hidden="true">edit</span>
+                    </button>
+                    <button class="saved-attendance-delete" type="button" aria-label="Excluir chamada"
+                        (click)="deleteSavedAttendance(attendance.savedAt)">
+                        <span class="material-icons" aria-hidden="true">delete</span>
+                    </button>
+                </div>
+
+                <div class="saved-attendance-summary">
+                    <div class="saved-attendance-count">{{ getSavedAttendanceSummary(attendance).total }} alunos</div>
+                    <ul>
+                        <li>{{ getSavedAttendanceSummary(attendance).present }} Presentes</li>
+                        <li>{{ getSavedAttendanceSummary(attendance).fnj }} Falta (NJ)</li>
+                    </ul>
+                </div>
+            </article>
+        </div>
     </section>
 </main>
 
@@ -124,13 +165,13 @@
                     <span class="material-icons" aria-hidden="true">close</span>
                 </button>
             </div>
-            <p>Dia/Mês: <strong>{{ selectedDay }}/{{ selectedMonth }}</strong></p>
+            <p>Série: <strong>{{ selectedSeries || selectedRoom }}</strong></p>
         </header>
 
         <div class="attendance-modal-summary">
             <span>Total de alunos:</span>
             <strong>{{ students.length }}</strong>
-            <button class="save-button" type="button" (click)="closeAttendanceModal()">
+            <button class="save-button" type="button" (click)="saveAttendance()">
                 <span class="material-icons" aria-hidden="true">save</span>
                 <span>Salvar</span>
             </button>

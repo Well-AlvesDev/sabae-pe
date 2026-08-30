@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
+import { getAttendanceCache, saveAttendanceCacheEntry } from '../../supabase';
 import { HomeComponent } from './home.component';
 
 describe('HomeComponent performance status', () => {
@@ -51,5 +52,29 @@ describe('HomeComponent performance status', () => {
       { name: 'A', total: 5, present: 3, fnj: 1, fj: 1, presentPct: 60, fnjPct: 20, fjPct: 20 },
       { name: 'B', total: 3, present: 1, fnj: 1, fj: 1, presentPct: 33, fnjPct: 33, fjPct: 33 },
     ]);
+  });
+
+  it('should persist each attendance register in its own cache row', () => {
+    localStorage.clear();
+
+    saveAttendanceCacheEntry({
+      room: 'Sala 1',
+      month: 'Agosto',
+      day: '30',
+      savedAt: 1,
+      students: [{ name: 'Ana', registration: '123', status: 'P' }],
+    });
+
+    saveAttendanceCacheEntry({
+      room: 'Sala 2',
+      month: 'Agosto',
+      day: '31',
+      savedAt: 2,
+      students: [{ name: 'Bruno', registration: '456', status: 'FNJ' }],
+    });
+
+    expect(getAttendanceCache()).toHaveLength(2);
+    expect(getAttendanceCache()[0]).toEqual(expect.objectContaining({ room: 'Sala 1', day: '30' }));
+    expect(getAttendanceCache()[1]).toEqual(expect.objectContaining({ room: 'Sala 2', day: '31' }));
   });
 });

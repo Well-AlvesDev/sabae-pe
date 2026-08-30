@@ -16,6 +16,7 @@ const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TBDA_CACHE_VERSION = 3;
 const TBDA_METADATA_COLUMNS = ['NOME', 'TURMA', 'TURNO', 'STATUS'];
+export const ATTENDANCE_CACHE_KEY = 'sabae.attendance.cache';
 const TBDA_SELECT = [
   ...TBDA_METADATA_COLUMNS.map((column) => `"${column}"`),
   ...TBDA_COLUMNS.map((column) => `"${column}"`),
@@ -93,6 +94,117 @@ export async function ensureTbdaCache(useSessionStorage = false): Promise<Record
   }
 
   return tbdaCacheSyncPromise;
+}
+
+export type AttendanceCacheStatus = 'P' | 'FNJ' | 'FJ';
+
+export type AttendanceCacheStudent = {
+  name: string;
+  registration: string;
+  status: AttendanceCacheStatus | null;
+};
+
+export type AttendanceCacheEntry = {
+  room: string;
+  series: string;
+  className: string;
+  month: string;
+  day: string;
+  savedAt: number;
+  students: AttendanceCacheStudent[];
+};
+
+export function saveAttendanceCacheEntry(entry: AttendanceCacheEntry): AttendanceCacheEntry[] {
+  const currentEntries = getAttendanceCache();
+  const normalizedEntry: AttendanceCacheEntry = {
+    room: String(entry.room ?? '').trim(),
+    series: String(entry.series ?? '').trim() || String(entry.room ?? '').trim(),
+    className: String(entry.className ?? '').trim() || (String(entry.room ?? '').trim().split(/\s+/).at(-1) ?? ''),
+    month: String(entry.month ?? '').trim(),
+    day: String(entry.day ?? '').trim(),
+    savedAt: Number(entry.savedAt ?? Date.now()),
+    students: Array.isArray(entry.students) ? entry.students.map(student => ({
+      name: String(student?.name ?? '').trim(),
+      registration: String(student?.registration ?? '').trim(),
+      status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
+    })) : [],
+  };
+
+  const nextEntries = [...currentEntries, normalizedEntry];
+
+  try {
+    localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+  } catch {}
+
+  return nextEntries;
+}
+
+export function getAttendanceCache(): AttendanceCacheEntry[] {
+  try {
+    const raw = localStorage.getItem(ATTENDANCE_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      localStorage.removeItem(ATTENDANCE_CACHE_KEY);
+      return [];
+    }
+
+    const normalizedEntries = parsed
+      .filter((entry): entry is Partial<AttendanceCacheEntry> => Boolean(entry && typeof entry === 'object'))
+      .map((entry) => {
+        const candidate = entry as Partial<AttendanceCacheEntry>;
+        const room = typeof candidate.room === 'string' ? candidate.room.trim() : '';
+        const month = typeof candidate.month === 'string' ? candidate.month.trim() : '';
+        const day = typeof candidate.day === 'string' ? candidate.day.trim() : '';
+        const students = Array.isArray(candidate.students) ? candidate.students : [];
+
+        if (!room || !month || !day || !students.length) {
+          return null;
+        }
+
+        return {
+          room,
+          series: typeof candidate.series === 'string' ? candidate.series.trim() : room,
+          className: typeof candidate.className === 'string' ? candidate.className.trim() : '',
+          month,
+          day,
+          savedAt: Number(candidate.savedAt ?? Date.now()),
+          students: students.map(student => ({
+            name: String(student?.name ?? '').trim(),
+            registration: String(student?.registration ?? '').trim(),
+            status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
+          })),
+        } satisfies AttendanceCacheEntry;
+      })
+      .filter((entry): entry is AttendanceCacheEntry => Boolean(entry));
+
+    if (normalizedEntries.length !== parsed.length) {
+      try {
+        localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(normalizedEntries));
+      } catch {}
+    }
+
+    return normalizedEntries;
+  } catch {
+    try {
+      localStorage.removeItem(ATTENDANCE_CACHE_KEY);
+    } catch {}
+    return [];
+  }
+}
+
+export function removeAttendanceCacheEntry(savedAt: number): AttendanceCacheEntry[] {
+  const currentEntries = getAttendanceCache();
+  const nextEntries = currentEntries.filter(entry => Number(entry.savedAt) !== Number(savedAt));
+
+  try {
+    localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+  } catch {}
+
+  return nextEntries;
 }
 
 export function getTbdaClassrooms(rows: Record<string, unknown>[] | null = getTbdaCache()): string[] {

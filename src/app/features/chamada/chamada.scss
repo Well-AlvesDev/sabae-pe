@@ -154,6 +154,163 @@
   font-size: 20px;
 }
 
+.saved-attendance-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+}
+
+.saved-attendance-header-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #1f6fcb;
+  padding-bottom: 8px;
+}
+
+.saved-attendance-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.saved-attendance-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(31, 111, 203, 0.08);
+  color: #1f6fcb;
+  font-size: 20px;
+}
+
+.saved-attendance-list h2 {
+  margin: 0;
+  color: #1e2d3a;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.saved-attendance-send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #a0a7af;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.saved-attendance-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #dfe5ec;
+  border-left: 3px solid #1f6fcb;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px 12px 10px;
+  box-shadow: 0 2px 8px rgba(17, 24, 32, 0.05);
+}
+
+.saved-attendance-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.saved-attendance-title {
+  color: #1e2d3a;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.saved-attendance-date {
+  margin-top: 4px;
+  color: #1e2d3a;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.saved-attendance-meta {
+  margin-top: 6px;
+  color: #586878;
+  font-size: 0.78rem;
+}
+
+.saved-attendance-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e4e9f0;
+}
+
+.saved-attendance-edit,
+.saved-attendance-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.saved-attendance-edit .material-icons,
+.saved-attendance-delete .material-icons {
+  font-size: 22px;
+}
+
+.saved-attendance-edit .material-icons {
+  color: #1e2d3a;
+}
+
+.saved-attendance-delete .material-icons {
+  color: #ef4d4d;
+}
+
+.saved-attendance-summary {
+  margin-top: 10px;
+  border-top: 1px solid #e4e9f0;
+  padding-top: 8px;
+}
+
+.saved-attendance-count {
+  color: #1e2d3a;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.saved-attendance-summary ul {
+  margin: 6px 0 0;
+  padding-left: 14px;
+  color: #334559;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.saved-attendance-summary li {
+  list-style: disc;
+  margin-left: 4px;
+  padding-left: 2px;
+}
+
 .attendance-modal-backdrop {
   position: fixed;
   z-index: 1100;
