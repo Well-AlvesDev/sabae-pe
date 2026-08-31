@@ -293,6 +293,10 @@
   color: #fff;
 }
 
+.attendance-modal-header.is-editing {
+  background:#ed8d2f;
+}
+
 .attendance-modal-title-row {
   width: 100%;
   justify-content: space-between;
@@ -313,6 +317,11 @@
   background: #e2f2ff;
   color: #0874c9;
   font-size: 1rem;
+}
+
+.attendance-modal-header.is-editing p {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff8f1;
 }
 
 .modal-close-button {
@@ -349,6 +358,10 @@
   font-weight: 700;
   padding: 8px 16px;
   box-shadow: 0 1px 3px rgba(15, 35, 55, 0.08);
+}
+
+.save-button.is-editing {
+  background: #d5781a;
 }
 
 .student-list { overflow-y: auto; padding: 24px 22px 28px; }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,7 +7,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
-import { ensureTbdaCache, getAttendanceCache, getTbdaClassrooms, removeAttendanceCacheEntry, saveAttendanceCacheEntry, supabase, supabaseWithSessionStorage, type AttendanceCacheEntry } from '../../supabase';
+import { AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
+import { ensureTbdaCache, getAttendanceCache, getTbdaClassrooms, removeAttendanceCacheEntry, saveAttendanceCacheEntry, sendAttendanceCacheToTbda, supabase, supabaseWithSessionStorage, updateAttendanceCacheEntry, type AttendanceCacheEntry } from '../../supabase';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ' | null;
 
@@ -23,6 +24,7 @@ type StudentAttendance = {
   imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule],
   templateUrl: './chamada.html',
   styleUrls: ['./chamada.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChamadaComponent implements OnInit, OnDestroy {
   public isMenuOpen = false;
@@ -50,12 +52,15 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public students: StudentAttendance[] = [];
   public savedAttendances: AttendanceCacheEntry[] = [];
   public isAttendanceModalOpen = false;
+  public isEditingAttendance = false;
+  public editingAttendanceSavedAt: number | null = null;
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public userName = 'usuário';
   public userEmail = 'Obtendo usuário...';
   public avatarInitial = 'U';
   public isLoadingProfile = true;
   public isLoadingAttendanceData = true;
+  public isSendingSavedAttendances = false;
   private authSub1: any;
   private authSub2: any;
   private _logoutDialogOpen = false;
@@ -148,6 +153,9 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   }
 
   public openAttendanceModal(): void {
+    this.isEditingAttendance = false;
+    this.editingAttendanceSavedAt = null;
+
     const selectedRoom = this.selectedRoom.trim();
     this.selectedSeries = this.parseSeries(selectedRoom);
     this.selectedClass = this.parseClassName(selectedRoom);
@@ -155,7 +163,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       .filter(row => this.getRowText(row, 'TURMA') === selectedRoom)
       .map(row => ({
         name: this.getRowText(row, 'NOME'),
-        registration: this.getRowText(row, 'MATRICULA', 'MATRÍCULA'),
+        registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
         status: 'P' as const,
       }))
       .filter(student => student.name)
@@ -163,8 +171,38 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.isAttendanceModalOpen = true;
   }
 
+  public openAttendanceModalForEdit(attendance: AttendanceCacheEntry): void {
+    this.isEditingAttendance = true;
+    this.editingAttendanceSavedAt = attendance.savedAt;
+    this.selectedRoom = String(attendance.room ?? '').trim();
+    this.selectedSeries = String(attendance.series ?? '').trim() || this.parseSeries(this.selectedRoom);
+    this.selectedClass = String(attendance.className ?? '').trim() || this.parseClassName(this.selectedRoom);
+    this.selectedMonth = this.getMonthNameByNumber(String(attendance.month ?? '')) || this.months[Number(attendance.month) - 1] || this.selectedMonth;
+    this.selectedDay = String(attendance.day ?? '').trim() || this.selectedDay;
+
+    this.students = Array.isArray(attendance.students) && attendance.students.length
+      ? attendance.students.map(student => ({
+          name: String(student?.name ?? '').trim(),
+          registration: String(student?.registration ?? '').trim(),
+          status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : 'P',
+        }))
+      : this.tbdaRows
+          .filter(row => this.getRowText(row, 'TURMA') === this.selectedRoom)
+          .map(row => ({
+            name: this.getRowText(row, 'NOME'),
+            registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
+            status: 'P' as const,
+          }))
+          .filter(student => student.name)
+          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    this.isAttendanceModalOpen = true;
+  }
+
   public closeAttendanceModal(): void {
     this.isAttendanceModalOpen = false;
+    this.isEditingAttendance = false;
+    this.editingAttendanceSavedAt = null;
   }
 
   public saveAttendance(): void {
@@ -174,7 +212,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       className: this.selectedClass || this.parseClassName(this.selectedRoom),
       month: this.selectedMonth,
       day: this.selectedDay,
-      savedAt: Date.now(),
+      savedAt: this.isEditingAttendance && this.editingAttendanceSavedAt ? this.editingAttendanceSavedAt : Date.now(),
       students: this.students.map(student => ({
         name: student.name,
         registration: student.registration,
@@ -182,12 +220,93 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       })),
     };
 
-    this.savedAttendances = saveAttendanceCacheEntry(attendanceEntry);
+    this.savedAttendances = this.isEditingAttendance && this.editingAttendanceSavedAt
+      ? updateAttendanceCacheEntry(attendanceEntry)
+      : saveAttendanceCacheEntry(attendanceEntry);
     this.closeAttendanceModal();
   }
 
   public deleteSavedAttendance(savedAt: number): void {
     this.savedAttendances = removeAttendanceCacheEntry(savedAt);
+  }
+
+  public async confirmAndSendSavedAttendances(): Promise<void> {
+    if (!this.savedAttendances.length) {
+      return;
+    }
+
+    const ref = this.dialog.open(AttendanceSendConfirmDialogComponent, {
+      disableClose: true,
+      hasBackdrop: true,
+      maxWidth: 'calc(100vw - 32px)',
+      panelClass: 'attendance-send-confirm-dialog',
+    });
+
+    const confirmed = await ref.afterClosed().toPromise();
+    if (confirmed !== true) {
+      return;
+    }
+
+    const progressRef = this.dialog.open(AttendanceProgressDialogComponent, {
+      disableClose: true,
+      hasBackdrop: true,
+      maxWidth: 'calc(100vw - 32px)',
+      panelClass: 'attendance-progress-dialog',
+    });
+
+    this.isSendingSavedAttendances = true;
+    this.cdr.markForCheck();
+
+    const startedAt = Date.now();
+    const progressInstance = progressRef.componentInstance as AttendanceProgressDialogComponent;
+    progressInstance.applyUpdate({
+      total: this.savedAttendances.length,
+      processed: 0,
+      sent: 0,
+      failed: 0,
+      currentEntryLabel: 'Preparando envio...',
+      sentEntries: [],
+      failedEntries: [],
+    });
+    this.cdr.detectChanges();
+
+    try {
+      const result = await sendAttendanceCacheToTbda((update) => {
+        progressInstance.applyUpdate({
+          total: update.total,
+          processed: update.processed,
+          sent: update.sent,
+          failed: update.failed,
+          currentEntryLabel: update.currentEntryLabel || 'Processando...',
+          sentEntries: update.sentEntries,
+          failedEntries: update.failedEntries,
+        });
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      });
+
+      if (result.failed > 0 && result.success === 0) {
+        console.error('[chamada] failed to send attendance cache', result.errors);
+      }
+
+      this.loadSavedAttendances();
+      this.cdr.markForCheck();
+
+      const minimumVisibleMs = 1200;
+      const elapsed = Date.now() - startedAt;
+      const remainingDelay = minimumVisibleMs - elapsed;
+      if (remainingDelay > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingDelay));
+      }
+    } catch (error) {
+      console.error('[chamada] failed to send attendance cache', error);
+    } finally {
+      this.isSendingSavedAttendances = false;
+      this.cdr.markForCheck();
+      try {
+        progressRef.close();
+      } catch {}
+    }
   }
 
   public loadSavedAttendances(): void {
@@ -226,6 +345,16 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     const day = String(entry.day || '').padStart(2, '0');
     const month = this.getMonthNumber(entry.month);
     return `${day}/${month}`;
+  }
+
+  public getAttendanceModalDateLabel(): string {
+    const day = String(this.selectedDay || '').padStart(2, '0');
+    const month = this.getMonthNumber(this.selectedMonth);
+    return `${day}/${month}`;
+  }
+
+  public getAttendanceModalTitle(): string {
+    return this.isEditingAttendance ? 'Editar chamada' : 'Registrar Chamada';
   }
 
   public formatSavedAttendanceTimestamp(savedAt: number): string {
@@ -343,5 +472,14 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     }
 
     return String(monthIndex + 1).padStart(2, '0');
+  }
+
+  private getMonthNameByNumber(value: string): string {
+    const monthNumber = Number.parseInt(String(value ?? '').trim(), 10);
+    if (!Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12) {
+      return '';
+    }
+
+    return this.months[monthNumber - 1] ?? '';
   }
 }

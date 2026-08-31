@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { getAttendanceCache, getAttendanceRegistrationPayloads, saveAttendanceCacheEntry } from '../../supabase';
+import { appendAttendanceCellValue, getAttendanceCache, getAttendanceRegistrationPayloads, getAttendanceRegistrationPayloadsForEntry, saveAttendanceCacheEntry } from '../../supabase';
 import { HomeComponent } from './home.component';
 
 describe('HomeComponent performance status', () => {
@@ -96,5 +96,44 @@ describe('HomeComponent performance status', () => {
       { savedAt: 10, dia: 18, mes: 8, mat: '1001', nome: 'Ana Paula', presenca: 'P' },
       { savedAt: 10, dia: 18, mes: 8, mat: '1002', nome: 'Bruno Silva', presenca: 'FJ' },
     ]);
+  });
+
+  it('should build payloads per saved attendance entry for progress tracking', () => {
+    localStorage.clear();
+
+    saveAttendanceCacheEntry({
+      room: '2B',
+      month: 'Setembro',
+      day: '21',
+      savedAt: 11,
+      students: [
+        { name: 'Clara', registration: '2001', status: 'P' },
+        { name: 'Diego', registration: '2002', status: 'FNJ' },
+      ],
+    });
+
+    const entry = getAttendanceCache()[0];
+
+    expect(getAttendanceRegistrationPayloadsForEntry(entry)).toEqual([
+      { savedAt: 11, dia: 21, mes: 9, mat: '2001', nome: 'Clara', presenca: 'P' },
+      { savedAt: 11, dia: 21, mes: 9, mat: '2002', nome: 'Diego', presenca: 'FNJ' },
+    ]);
+  });
+
+  it('should normalize month names and append attendance tokens preserving existing values', () => {
+    localStorage.clear();
+
+    saveAttendanceCacheEntry({
+      room: '1 Ano B',
+      month: 'Agosto',
+      day: '18',
+      savedAt: 20,
+      students: [{ name: 'Carlos', registration: '3003', status: 'P' }],
+    });
+
+    const cached = getAttendanceCache()[0];
+    expect(cached.month).toBe('8');
+    expect(cached.students[0].registration).toBe('3003');
+    expect(appendAttendanceCellValue('FNJ:2', 'P', 8)).toBe('FNJ:2,P:8');
   });
 });

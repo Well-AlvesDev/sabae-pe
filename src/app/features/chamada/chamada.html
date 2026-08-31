@@ -119,7 +119,12 @@
                 </div>
             </div>
 
-            <button class="saved-attendance-send-button" type="button">Enviar para o Banco</button>
+            <button class="saved-attendance-send-button" type="button"
+                [disabled]="isSendingSavedAttendances || !savedAttendances.length"
+                (click)="confirmAndSendSavedAttendances()">
+                <span *ngIf="!isSendingSavedAttendances">Enviar para o Banco</span>
+                <span *ngIf="isSendingSavedAttendances">Enviando...</span>
+            </button>
 
             <article class="saved-attendance-card" *ngFor="let attendance of savedAttendances">
                 <div class="saved-attendance-topline">
@@ -133,7 +138,8 @@
                 </div>
 
                 <div class="saved-attendance-action-row">
-                    <button class="saved-attendance-edit" type="button" aria-label="Editar chamada">
+                    <button class="saved-attendance-edit" type="button" aria-label="Editar chamada"
+                        (click)="openAttendanceModalForEdit(attendance)">
                         <span class="material-icons" aria-hidden="true">edit</span>
                     </button>
                     <button class="saved-attendance-delete" type="button" aria-label="Excluir chamada"
@@ -157,23 +163,24 @@
 <div class="attendance-modal-backdrop" *ngIf="isAttendanceModalOpen" (click)="closeAttendanceModal()">
     <section class="attendance-modal" role="dialog" aria-modal="true" aria-labelledby="attendance-modal-title"
         (click)="$event.stopPropagation()">
-        <header class="attendance-modal-header">
+        <header class="attendance-modal-header" [class.is-editing]="isEditingAttendance">
             <div class="attendance-modal-title-row">
-                <h2 id="attendance-modal-title">Registrar Chamada - {{ selectedRoom }}</h2>
+                <h2 id="attendance-modal-title">{{ getAttendanceModalTitle() }} - {{ selectedRoom }}</h2>
                 <button class="modal-close-button" type="button" aria-label="Fechar registro"
                     (click)="closeAttendanceModal()">
                     <span class="material-icons" aria-hidden="true">close</span>
                 </button>
             </div>
-            <p>Série: <strong>{{ selectedSeries || selectedRoom }}</strong></p>
+            <p>Data: <strong>{{ getAttendanceModalDateLabel() }}</strong></p>
         </header>
 
         <div class="attendance-modal-summary">
             <span>Total de alunos:</span>
             <strong>{{ students.length }}</strong>
-            <button class="save-button" type="button" (click)="saveAttendance()">
+            <button class="save-button" type="button" [class.is-editing]="isEditingAttendance"
+                (click)="saveAttendance()">
                 <span class="material-icons" aria-hidden="true">save</span>
-                <span>Salvar</span>
+                <span>{{ isEditingAttendance ? 'Salvar alterações' : 'Salvar' }}</span>
             </button>
         </div>
 

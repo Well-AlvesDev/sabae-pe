@@ -3,9 +3,40 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://caslrvzsrxguqgzvhyug.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhc2xydnpzcnhndXFnenZoeXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NzczMzIsImV4cCI6MjEwMTU1MzMzMn0.V2-hIDweOcRBX7iYIaGqcCIgvC0LPL-z82Fn6iRLWlo';
 
+function createSafeStorage(): Storage {
+  const browserStorage = typeof globalThis !== 'undefined'
+    ? (globalThis as typeof globalThis & { localStorage?: Storage; sessionStorage?: Storage }).localStorage
+    : undefined;
+
+  if (browserStorage && typeof browserStorage.getItem === 'function' && typeof browserStorage.setItem === 'function') {
+    return browserStorage;
+  }
+
+  const store = new Map<string, string>();
+  const safeStorage: Storage = {
+    length: 0,
+    clear: () => { store.clear(); },
+    getItem: (key: string) => (store.has(key) ? store.get(key) ?? null : null),
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key: string) => { store.delete(key); },
+    setItem: (key: string, value: string) => { store.set(key, String(value)); },
+  };
+
+  Object.defineProperty(safeStorage, 'length', {
+    get: () => store.size,
+    enumerable: true,
+    configurable: true,
+  });
+
+  return safeStorage;
+}
+
+const localStorageStore = createSafeStorage();
+const sessionStorageStore = createSafeStorage();
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    storage: localStorage,
+    storage: localStorageStore,
   },
 });
 
@@ -14,8 +45,8 @@ const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
 const TBDA_CACHE_KEY = 'sabae.tbda.cache';
 const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
-const TBDA_CACHE_VERSION = 3;
-const TBDA_METADATA_COLUMNS = ['NOME', 'TURMA', 'TURNO', 'STATUS'];
+const TBDA_CACHE_VERSION = 4;
+const TBDA_METADATA_COLUMNS = ['MAT', 'NOME', 'TURMA', 'TURNO', 'STATUS'];
 export const ATTENDANCE_CACHE_KEY = 'sabae.attendance.cache';
 const TBDA_SELECT = [
   ...TBDA_METADATA_COLUMNS.map((column) => `"${column}"`),
@@ -41,14 +72,14 @@ function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
 export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
   const formatted = formatSaoPauloDateTime(value);
   try {
-    localStorage.setItem(TBDA_LAST_SEARCH_KEY, formatted);
+    localStorageStore.setItem(TBDA_LAST_SEARCH_KEY, formatted);
   } catch {}
   return formatted;
 }
 
 export function getTbdaLastSearchLabel(): string {
   try {
-    return localStorage.getItem(TBDA_LAST_SEARCH_KEY) || '';
+    return localStorageStore.getItem(TBDA_LAST_SEARCH_KEY) || '';
   } catch {
     return '';
   }
@@ -75,7 +106,7 @@ export async function syncTbdaCache(useSessionStorage = false): Promise<Record<s
   };
 
   try {
-    localStorage.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+    localStorageStore.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
   } catch {}
   setTbdaLastSearchLabel(requestedAt);
   return rows;
@@ -119,26 +150,264 @@ export type AttendanceCacheEntryInput = Omit<AttendanceCacheEntry, 'series' | 'c
   className?: string;
 };
 
-export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
-  const currentEntries = getAttendanceCache();
-  const normalizedEntry: AttendanceCacheEntry = {
+export function normalizeAttendanceMonth(value: string | number): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  const numeric = Number.parseInt(raw, 10);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 12) {
+    return String(numeric);
+  }
+
+  const monthMap: Record<string, number> = {
+    janeiro: 1,
+    fevereiro: 2,
+    marco: 3,
+    abril: 4,
+    maio: 5,
+    junho: 6,
+    julho: 7,
+    agosto: 8,
+    setembro: 9,
+    outubro: 10,
+    novembro: 11,
+    dezembro: 12,
+  };
+
+  const normalizedKey = raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const mappedMonth = monthMap[normalizedKey];
+  return Number.isInteger(mappedMonth) ? String(mappedMonth) : '';
+}
+
+export function appendAttendanceCellValue(existingValue: unknown, status: AttendanceCacheStatus, month: number): string {
+  const normalizedMonth = Number.isFinite(month) ? Number(month) : 0;
+  const token = `${status}:${normalizedMonth}`;
+  const rawText = String(existingValue ?? '').trim();
+
+  if (!rawText) {
+    return token;
+  }
+
+  const values = rawText
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+
+  if (values.includes(token)) {
+    return values.join(',');
+  }
+
+  return [...values, token].join(',');
+}
+
+export type AttendanceSendProgressUpdate = {
+  total: number;
+  processed: number;
+  sent: number;
+  failed: number;
+  sentEntries: string[];
+  failedEntries: string[];
+  currentEntryLabel: string;
+  completed: boolean;
+};
+
+export function getAttendanceEntryLabel(entry: AttendanceCacheEntry): string {
+  const room = String(entry.room ?? '').trim();
+  const series = String(entry.series ?? '').trim();
+  const className = String(entry.className ?? '').trim();
+  const base = [series || room, className].filter(Boolean).join(' ').trim();
+  const day = String(entry.day ?? '').trim();
+  const month = normalizeAttendanceMonth(entry.month);
+
+  if (base) {
+    return `${base} • ${day}/${month || '--'}`;
+  }
+
+  return `Chamada ${day}/${month || '--'}`;
+}
+
+export function getAttendanceRegistrationPayloadsForEntry(entry: AttendanceCacheEntry): Array<{ savedAt: number; dia: number; mes: number; mat: string; nome: string; presenca: string }> {
+  const monthValue = Number.parseInt(normalizeAttendanceMonth(entry.month), 10);
+  const dayValue = Number.parseInt(String(entry.day ?? '').trim(), 10);
+
+  return entry.students
+    .filter(student => student.status && student.registration)
+    .map(student => ({
+      savedAt: Number(entry.savedAt ?? Date.now()),
+      dia: Number.isFinite(dayValue) ? dayValue : 0,
+      mes: Number.isFinite(monthValue) ? monthValue : 0,
+      mat: String(student.registration),
+      nome: String(student.name ?? ''),
+      presenca: String(student.status),
+    }));
+}
+
+export function getAttendanceRegistrationPayloads(): Array<{ savedAt: number; dia: number; mes: number; mat: string; nome: string; presenca: string }> {
+  return getAttendanceCache().flatMap((entry) => getAttendanceRegistrationPayloadsForEntry(entry));
+}
+
+export async function sendAttendanceCacheToTbda(
+  onProgress?: (update: AttendanceSendProgressUpdate) => void,
+): Promise<{ success: number; failed: number; errors: string[]; sentEntries: string[]; failedEntries: string[]; total: number; processed: number }> {
+  const cacheEntries = getAttendanceCache();
+  const total = cacheEntries.length;
+
+  if (total === 0) {
+    return { success: 0, failed: 0, errors: [], sentEntries: [], failedEntries: [], total: 0, processed: 0 };
+  }
+
+  let processed = 0;
+  let success = 0;
+  let failed = 0;
+  const errors: string[] = [];
+  const sentEntries: string[] = [];
+  const failedEntries: string[] = [];
+
+  onProgress?.({
+    total,
+    processed,
+    sent: success,
+    failed,
+    sentEntries,
+    failedEntries,
+    currentEntryLabel: 'Preparando envio...',
+    completed: false,
+  });
+
+  for (const entry of cacheEntries) {
+    const currentEntryLabel = getAttendanceEntryLabel(entry);
+    const attendancePayload = getAttendanceRegistrationPayloadsForEntry(entry);
+
+    onProgress?.({
+      total,
+      processed,
+      sent: success,
+      failed,
+      sentEntries,
+      failedEntries,
+      currentEntryLabel: `Enviando ${currentEntryLabel}`,
+      completed: false,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    if (attendancePayload.length === 0) {
+      processed += 1;
+      failed += 1;
+      failedEntries.push(currentEntryLabel);
+      errors.push(`Nenhuma presença válida para: ${currentEntryLabel}`);
+      onProgress?.({
+        total,
+        processed,
+        sent: success,
+        failed,
+        sentEntries,
+        failedEntries,
+        currentEntryLabel,
+        completed: processed >= total,
+      });
+      continue;
+    }
+
+    const rpcResult = await supabase.rpc('send_attendance_cache', {
+      attendance_data: attendancePayload,
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 120));
+
+    if (rpcResult.error) {
+      processed += 1;
+      failed += 1;
+      failedEntries.push(currentEntryLabel);
+      errors.push(`Erro na RPC para ${currentEntryLabel}: ${rpcResult.error.message}`);
+      onProgress?.({
+        total,
+        processed,
+        sent: success,
+        failed,
+        sentEntries,
+        failedEntries,
+        currentEntryLabel,
+        completed: processed >= total,
+      });
+      continue;
+    }
+
+    const result = rpcResult.data as { success: number; failed: number; errors: string[] };
+
+    if (result.failed === 0) {
+      success += 1;
+      sentEntries.push(currentEntryLabel);
+      removeAttendanceCacheEntry(entry.savedAt);
+    } else {
+      failed += 1;
+      failedEntries.push(currentEntryLabel);
+      errors.push(...(result.errors ?? []).map(error => `${currentEntryLabel}: ${error}`));
+    }
+
+    processed += 1;
+
+    onProgress?.({
+      total,
+      processed,
+      sent: success,
+      failed,
+      sentEntries,
+      failedEntries,
+      currentEntryLabel,
+      completed: processed >= total,
+    });
+  }
+
+  return {
+    success,
+    failed,
+    errors,
+    sentEntries,
+    failedEntries,
+    total,
+    processed,
+  };
+}
+
+function normalizeAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry {
+  return {
     room: String(entry.room ?? '').trim(),
     series: String(entry.series ?? '').trim() || String(entry.room ?? '').trim(),
     className: String(entry.className ?? '').trim() || (String(entry.room ?? '').trim().split(/\s+/).at(-1) ?? ''),
-    month: String(entry.month ?? '').trim(),
+    month: normalizeAttendanceMonth(entry.month),
     day: String(entry.day ?? '').trim(),
     savedAt: Number(entry.savedAt ?? Date.now()),
     students: Array.isArray(entry.students) ? entry.students.map(student => ({
       name: String(student?.name ?? '').trim(),
       registration: String(student?.registration ?? '').trim(),
       status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
-    })) : [],
+    })).filter(student => student.name || student.registration) : [],
   };
+}
 
+export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
+  const currentEntries = getAttendanceCache();
+  const normalizedEntry = normalizeAttendanceCacheEntry(entry);
   const nextEntries = [...currentEntries, normalizedEntry];
 
   try {
-    localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+  } catch {}
+
+  return nextEntries;
+}
+
+export function updateAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
+  const currentEntries = getAttendanceCache();
+  const normalizedEntry = normalizeAttendanceCacheEntry(entry);
+  const nextEntries = currentEntries.filter(existing => existing.savedAt !== normalizedEntry.savedAt);
+  nextEntries.push(normalizedEntry);
+
+  try {
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -146,14 +415,14 @@ export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Atte
 
 export function getAttendanceCache(): AttendanceCacheEntry[] {
   try {
-    const raw = localStorage.getItem(ATTENDANCE_CACHE_KEY);
+    const raw = localStorageStore.getItem(ATTENDANCE_CACHE_KEY);
     if (!raw) {
       return [];
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
-      localStorage.removeItem(ATTENDANCE_CACHE_KEY);
+      localStorageStore.removeItem(ATTENDANCE_CACHE_KEY);
       return [];
     }
 
@@ -162,7 +431,7 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
       .map((entry) => {
         const candidate = entry as Partial<AttendanceCacheEntry>;
         const room = typeof candidate.room === 'string' ? candidate.room.trim() : '';
-        const month = typeof candidate.month === 'string' ? candidate.month.trim() : '';
+        const month = normalizeAttendanceMonth(typeof candidate.month === 'string' ? candidate.month : String(candidate.month ?? ''));
         const day = typeof candidate.day === 'string' ? candidate.day.trim() : '';
         const students = Array.isArray(candidate.students) ? candidate.students : [];
 
@@ -188,14 +457,14 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
 
     if (normalizedEntries.length !== parsed.length) {
       try {
-        localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(normalizedEntries));
+        localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(normalizedEntries));
       } catch {}
     }
 
     return normalizedEntries;
   } catch {
     try {
-      localStorage.removeItem(ATTENDANCE_CACHE_KEY);
+      localStorageStore.removeItem(ATTENDANCE_CACHE_KEY);
     } catch {}
     return [];
   }
@@ -206,7 +475,7 @@ export function removeAttendanceCacheEntry(savedAt: number): AttendanceCacheEntr
   const nextEntries = currentEntries.filter(entry => Number(entry.savedAt) !== Number(savedAt));
 
   try {
-    localStorage.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -228,7 +497,7 @@ export function getTbdaClassrooms(rows: Record<string, unknown>[] | null = getTb
 
 export function getTbdaCache(): Record<string, unknown>[] | null {
   try {
-    const raw = localStorage.getItem(TBDA_CACHE_KEY);
+    const raw = localStorageStore.getItem(TBDA_CACHE_KEY);
     if (!raw) {
       return null;
     }
@@ -237,13 +506,13 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as TbdaCachePayload).data)) {
       const cachePayload = parsed as TbdaCachePayload;
       if (cachePayload.version !== TBDA_CACHE_VERSION) {
-        localStorage.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(TBDA_CACHE_KEY);
         return null;
       }
 
       const cacheAge = Date.now() - Number(cachePayload.timestamp || 0);
       if (cacheAge > TBDA_CACHE_TTL_MS) {
-        localStorage.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(TBDA_CACHE_KEY);
         return null;
       }
 
@@ -251,7 +520,7 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
         TBDA_METADATA_COLUMNS.every(column => Object.prototype.hasOwnProperty.call(row, column)),
       );
       if (!hasMetadata) {
-        localStorage.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(TBDA_CACHE_KEY);
         return null;
       }
 
@@ -269,7 +538,7 @@ export const supabaseWithSessionStorage = createClient(
   SUPABASE_ANON_KEY,
   {
     auth: {
-      storage: sessionStorage,
+      storage: sessionStorageStore,
     },
   }
 );
