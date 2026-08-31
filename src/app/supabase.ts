@@ -114,7 +114,12 @@ export type AttendanceCacheEntry = {
   students: AttendanceCacheStudent[];
 };
 
-export function saveAttendanceCacheEntry(entry: AttendanceCacheEntry): AttendanceCacheEntry[] {
+export type AttendanceCacheEntryInput = Omit<AttendanceCacheEntry, 'series' | 'className'> & {
+  series?: string;
+  className?: string;
+};
+
+export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
   const currentEntries = getAttendanceCache();
   const normalizedEntry: AttendanceCacheEntry = {
     room: String(entry.room ?? '').trim(),
@@ -152,8 +157,8 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
       return [];
     }
 
-    const normalizedEntries = parsed
-      .filter((entry): entry is Partial<AttendanceCacheEntry> => Boolean(entry && typeof entry === 'object'))
+    const normalizedEntries: AttendanceCacheEntry[] = parsed
+      .filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === 'object'))
       .map((entry) => {
         const candidate = entry as Partial<AttendanceCacheEntry>;
         const room = typeof candidate.room === 'string' ? candidate.room.trim() : '';
@@ -179,7 +184,7 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
           })),
         } satisfies AttendanceCacheEntry;
       })
-      .filter((entry): entry is AttendanceCacheEntry => Boolean(entry));
+      .filter((entry): entry is AttendanceCacheEntry => entry !== null);
 
     if (normalizedEntries.length !== parsed.length) {
       try {

@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, NgZone } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { getAttendanceCache, saveAttendanceCacheEntry } from '../../supabase';
+import { getAttendanceCache, getAttendanceRegistrationPayloads, saveAttendanceCacheEntry } from '../../supabase';
 import { HomeComponent } from './home.component';
 
 describe('HomeComponent performance status', () => {
@@ -76,5 +76,25 @@ describe('HomeComponent performance status', () => {
     expect(getAttendanceCache()).toHaveLength(2);
     expect(getAttendanceCache()[0]).toEqual(expect.objectContaining({ room: 'Sala 1', day: '30' }));
     expect(getAttendanceCache()[1]).toEqual(expect.objectContaining({ room: 'Sala 2', day: '31' }));
+  });
+
+  it('should convert cached calls into registrar_chamada_nativa payloads', () => {
+    localStorage.clear();
+
+    saveAttendanceCacheEntry({
+      room: '1A',
+      month: 'Agosto',
+      day: '18',
+      savedAt: 10,
+      students: [
+        { name: 'Ana Paula', registration: '1001', status: 'P' },
+        { name: 'Bruno Silva', registration: '1002', status: 'FJ' },
+      ],
+    });
+
+    expect(getAttendanceRegistrationPayloads()).toEqual([
+      { savedAt: 10, dia: 18, mes: 8, mat: '1001', nome: 'Ana Paula', presenca: 'P' },
+      { savedAt: 10, dia: 18, mes: 8, mat: '1002', nome: 'Bruno Silva', presenca: 'FJ' },
+    ]);
   });
 });
