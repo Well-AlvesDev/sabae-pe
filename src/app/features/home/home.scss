@@ -25,6 +25,18 @@ dashboard-shell mat-card {
   -webkit-overflow-scrolling: touch;
 }
 
+@media (max-width: 640px) {
+  .home-content {
+    padding-bottom: 150px;
+  }
+}
+
+@media (max-width: 440px) {
+  .home-content {
+    padding-bottom: 180px;
+  }
+}
+
 .logo-container {
   display: flex;
   justify-content: center;
