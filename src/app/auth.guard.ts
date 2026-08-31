@@ -15,7 +15,7 @@ export async function authGuard(): Promise<boolean | UrlTree> {
   const hasError = localError && !localData?.session && sessionError;
 
   if (!hasSession || hasError) {
-    return router.parseUrl('/');
+    return router.parseUrl('/login');
   }
 
   try {
