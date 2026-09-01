@@ -1,4 +1,4 @@
-# SabaePe
+# SABAE - PE
 
 Aplicação web desenvolvida para apoiar a gestão escolar e o controle de presença em escolas estaduais de Pernambuco. A ideia do projeto é criar uma ferramenta prática, moderna e escalável para facilitar processos administrativos e melhorar a organização da rotina escolar.
 
