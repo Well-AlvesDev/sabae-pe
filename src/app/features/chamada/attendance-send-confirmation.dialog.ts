@@ -245,3 +245,88 @@ export class AttendanceProgressDialogComponent {
     return Math.min(100, (this.processed / this.total) * 100);
   }
 }
+
+@Component({
+  selector: 'app-attendance-duplicate-warning-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <div class="attendance-duplicate-warning-dialog">
+      <div class="dialog-header">
+        <span class="material-icons" aria-hidden="true">warning</span>
+        <h3>Chamada já registrada</h3>
+      </div>
+
+      <p>
+        Já existe uma chamada salva localmente para a sala <strong>{{ room }}</strong> na data <strong>{{ date }}</strong>.
+      </p>
+
+      <p class="dialog-subtext">
+        Edite a chamada salva ou exclua antes de registrar outra para o mesmo período.
+      </p>
+
+      <div class="dialog-actions">
+        <button mat-flat-button color="primary" type="button" (click)="onClose()">
+          <mat-icon aria-hidden="true">check</mat-icon>
+          Entendi
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [
+    `
+      .attendance-duplicate-warning-dialog {
+        width: min(380px, calc(100vw - 32px));
+        box-sizing: border-box;
+        padding: 20px 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .dialog-header .material-icons {
+        font-size: 28px;
+        color: #f59e0b;
+      }
+
+      .dialog-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #212121;
+      }
+
+      .attendance-duplicate-warning-dialog p {
+        margin: 0;
+        color: #424242;
+        line-height: 1.5;
+      }
+
+      .dialog-subtext {
+        color: #5f6368;
+        font-size: 0.92rem;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+    `,
+  ],
+})
+export class AttendanceDuplicateWarningDialogComponent {
+  public room = '';
+  public date = '';
+
+  constructor(private dialogRef: MatDialogRef<AttendanceDuplicateWarningDialogComponent>) {}
+
+  onClose(): void {
+    this.dialogRef.close();
+  }
+}

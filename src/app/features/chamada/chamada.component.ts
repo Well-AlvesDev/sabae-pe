@@ -7,8 +7,20 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router } from '@angular/router';
-import { AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
-import { ensureTbdaCache, getAttendanceCache, getTbdaClassrooms, removeAttendanceCacheEntry, saveAttendanceCacheEntry, sendAttendanceCacheToTbda, supabase, supabaseWithSessionStorage, updateAttendanceCacheEntry, type AttendanceCacheEntry } from '../../supabase';
+import { AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
+import {
+  ensureTbdaCache,
+  getAttendanceCache,
+  getTbdaClassrooms,
+  normalizeAttendanceMonth,
+  removeAttendanceCacheEntry,
+  saveAttendanceCacheEntry,
+  sendAttendanceCacheToTbda,
+  supabase,
+  supabaseWithSessionStorage,
+  updateAttendanceCacheEntry,
+  type AttendanceCacheEntry,
+} from '../../supabase';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ' | null;
 
@@ -157,6 +169,24 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.editingAttendanceSavedAt = null;
 
     const selectedRoom = this.selectedRoom.trim();
+    if (!selectedRoom) {
+      return;
+    }
+
+    if (this.hasDuplicateSavedAttendance(selectedRoom, this.selectedMonth, this.selectedDay)) {
+      const ref = this.dialog.open(AttendanceDuplicateWarningDialogComponent, {
+        disableClose: true,
+        hasBackdrop: true,
+        maxWidth: 'calc(100vw - 32px)',
+        panelClass: 'attendance-duplicate-warning-dialog',
+      });
+
+      const component = ref.componentInstance as AttendanceDuplicateWarningDialogComponent;
+      component.room = selectedRoom;
+      component.date = `${String(this.selectedDay || '').padStart(2, '0')}/${this.getMonthNumber(this.selectedMonth)}`;
+      return;
+    }
+
     this.selectedSeries = this.parseSeries(selectedRoom);
     this.selectedClass = this.parseClassName(selectedRoom);
     this.students = this.tbdaRows
@@ -417,6 +447,23 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   }
 
   private tbdaRows: Record<string, unknown>[] = [];
+
+  private hasDuplicateSavedAttendance(room: string, monthName: string, day: string): boolean {
+    const normalizedRoom = String(room ?? '').trim();
+    const normalizedMonth = normalizeAttendanceMonth(monthName);
+    const normalizedDay = String(day ?? '').trim();
+
+    if (!normalizedRoom || !normalizedMonth || !normalizedDay) {
+      return false;
+    }
+
+    return getAttendanceCache().some(entry => {
+      const sameRoom = String(entry.room ?? '').trim() === normalizedRoom;
+      const sameMonth = String(entry.month ?? '').trim() === normalizedMonth;
+      const sameDay = String(entry.day ?? '').trim() === normalizedDay;
+      return sameRoom && sameMonth && sameDay;
+    });
+  }
 
   private parseSeries(value: string): string {
     const trimmed = value.trim();

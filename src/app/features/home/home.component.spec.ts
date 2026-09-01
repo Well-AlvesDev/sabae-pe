@@ -78,6 +78,30 @@ describe('HomeComponent performance status', () => {
     expect(getAttendanceCache()[1]).toEqual(expect.objectContaining({ room: 'Sala 2', day: '31' }));
   });
 
+  it('should prevent saving duplicate attendance for the same room on the same day', () => {
+    localStorage.clear();
+
+    saveAttendanceCacheEntry({
+      room: 'Sala 1',
+      month: 'Agosto',
+      day: '30',
+      savedAt: 1,
+      students: [{ name: 'Ana', registration: '123', status: 'P' }],
+    });
+
+    saveAttendanceCacheEntry({
+      room: 'Sala 1',
+      month: 'Agosto',
+      day: '30',
+      savedAt: 2,
+      students: [{ name: 'Bruno', registration: '456', status: 'FNJ' }],
+    });
+
+    const cached = getAttendanceCache();
+    expect(cached).toHaveLength(1);
+    expect(cached[0]).toEqual(expect.objectContaining({ room: 'Sala 1', day: '30', savedAt: 1 }));
+  });
+
   it('should convert cached calls into registrar_chamada_nativa payloads', () => {
     localStorage.clear();
 

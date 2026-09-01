@@ -388,10 +388,25 @@ function normalizeAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Attend
   };
 }
 
+function replaceDuplicateAttendanceEntry(currentEntries: AttendanceCacheEntry[], normalizedEntry: AttendanceCacheEntry): AttendanceCacheEntry[] {
+  const duplicateIndex = currentEntries.findIndex(existing =>
+    existing.room === normalizedEntry.room &&
+    existing.month === normalizedEntry.month &&
+    existing.day === normalizedEntry.day &&
+    Number(existing.savedAt) !== Number(normalizedEntry.savedAt)
+  );
+
+  if (duplicateIndex === -1) {
+    return [...currentEntries, normalizedEntry];
+  }
+
+  return currentEntries.map((existing, index) => (index === duplicateIndex ? normalizedEntry : existing));
+}
+
 export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
   const currentEntries = getAttendanceCache();
   const normalizedEntry = normalizeAttendanceCacheEntry(entry);
-  const nextEntries = [...currentEntries, normalizedEntry];
+  const nextEntries = replaceDuplicateAttendanceEntry(currentEntries, normalizedEntry);
 
   try {
     localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
@@ -403,8 +418,8 @@ export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Atte
 export function updateAttendanceCacheEntry(entry: AttendanceCacheEntryInput): AttendanceCacheEntry[] {
   const currentEntries = getAttendanceCache();
   const normalizedEntry = normalizeAttendanceCacheEntry(entry);
-  const nextEntries = currentEntries.filter(existing => existing.savedAt !== normalizedEntry.savedAt);
-  nextEntries.push(normalizedEntry);
+  const deduplicatedEntries = currentEntries.filter(existing => existing.savedAt !== normalizedEntry.savedAt);
+  const nextEntries = replaceDuplicateAttendanceEntry(deduplicatedEntries, normalizedEntry);
 
   try {
     localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
