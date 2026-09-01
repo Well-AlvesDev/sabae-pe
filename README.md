@@ -1,59 +1,102 @@
 # SabaePe
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.6.
+Aplicação web desenvolvida para apoiar a gestão escolar e o controle de presença em escolas estaduais de Pernambuco. A ideia do projeto é criar uma ferramenta prática, moderna e escalável para facilitar processos administrativos e melhorar a organização da rotina escolar.
 
-## Development server
+## Visão do produto
 
-To start a local development server, run:
+O sistema foi pensado para ser uma solução digital útil para o ambiente escolar público, com foco em:
+
+- autenticação e acesso seguro
+- organização de dados de alunos e turmas
+- controle de presença
+- gestão de informações escolares em uma interface simples e amigável
+- estrutura pronta para evoluir em etapas futuras
+
+## Stack atual
+
+- Angular 21
+- Angular Material
+- TypeScript
+- Supabase
+- RxJS
+- HTML / SCSS
+- SQL / PostgreSQL (via Supabase)
+
+## Estrutura principal
+
+```text
+src/
+  app/
+    core/
+    features/
+      login/
+      home/
+      chamada/
+```
+
+## Funcionalidades iniciais
+
+- login com autenticação
+- rota protegida para acesso da aplicação
+- tela inicial com visão geral
+- registro de chamada/presença
+- cache local para melhor performance e uso offline parcial
+- integração com Supabase para dados e autenticação
+
+## Como rodar o projeto localmente
+
+### 1. Instale as dependências
+
+```bash
+npm install
+```
+
+### 2. Inicie o projeto em modo de desenvolvimento
+
+```bash
+npm start
+```
+
+Ou, se preferir:
 
 ```bash
 ng serve
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+A aplicação ficará disponível em:
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```text
+http://localhost:4200/
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### 3. Build de produção
 
 ```bash
-ng generate --help
+npm run build
 ```
 
-## Building
-
-To build the project run:
+### 4. Rodar testes
 
 ```bash
-ng build
+npm test
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Observações importantes
 
-## Running unit tests
+- O projeto usa Supabase para autenticação e persistência de dados.
+- O código está estruturado em componentes e rotas com lazy loading.
+- A aplicação está em fase inicial, mas com a visão de evoluir para uma solução relevante para a educação pública.
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+## Objetivo estratégico
 
-```bash
-ng test
-```
+A proposta do projeto é desenvolver uma solução digital com potencial para contribuir com a gestão escolar pública e, futuramente, ser apresentada como uma alternativa moderna e útil para o governo do estado.
 
-## Running end-to-end tests
+## Contribuição
 
-For end-to-end (e2e) testing, run:
+Este projeto ainda está em desenvolvimento. Futuras melhorias podem incluir:
 
-```bash
-ng e2e
-```
+- melhor organização do painel administrativo
+- novos filtros e relatórios
+- melhoria na experiência do usuário
+- expansão para mais módulos escolares
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

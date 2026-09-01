@@ -17,8 +17,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       </div>
 
       <p>
-        Esta ação vai registrar cada chamada salva localmente no cache e atualizar a tabela
-        <strong>TBDA</strong> com os valores de frequência do dia selecionado.
+        As chamadas salvas neste dispositivo serão enviadas para o banco de dados na nuvem.
       </p>
 
       <div class="dialog-actions">

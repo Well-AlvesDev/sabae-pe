@@ -26,7 +26,7 @@ describe('HomeComponent performance status', () => {
   });
 
   it('should mark low performance for scores below 7', () => {
-    component['setPerformanceState'](6.9);
+    component['setPerformanceState'](6.9);2
 
     expect(component.performanceLabel).toBe('Baixo desempenho');
     expect(component.performanceClass).toBe('danger');
