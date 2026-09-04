@@ -6,16 +6,18 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
-import { Router } from '@angular/router';
-import { AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
+import { Router, RouterLink } from '@angular/router';
+import { AttendanceDeleteConfirmDialogComponent, AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
 import {
   ensureTbdaCache,
   getAttendanceCache,
+  getAttendanceRegistrationPayloadsForEntry,
   getTbdaClassrooms,
   normalizeAttendanceMonth,
   removeAttendanceCacheEntry,
   saveAttendanceCacheEntry,
   sendAttendanceCacheToTbda,
+  syncTbdaCache,
   supabase,
   supabaseWithSessionStorage,
   updateAttendanceCacheEntry,
@@ -33,7 +35,7 @@ type StudentAttendance = {
 @Component({
   selector: 'app-chamada',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule, RouterLink],
   templateUrl: './chamada.html',
   styleUrls: ['./chamada.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,6 +65,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public rooms: string[] = [];
   public students: StudentAttendance[] = [];
   public savedAttendances: AttendanceCacheEntry[] = [];
+  public deletingAttendanceSavedAt: number | null = null;
   public isAttendanceModalOpen = false;
   public isEditingAttendance = false;
   public editingAttendanceSavedAt: number | null = null;
@@ -76,6 +79,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   private authSub1: any;
   private authSub2: any;
   private _logoutDialogOpen = false;
+  private useSessionStorageForTbdaCache = false;
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
@@ -120,7 +124,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
         this.updateProfile(user);
       }
 
-      const rows = await ensureTbdaCache(!!sessionSessionData?.session && !localSessionData?.session);
+      this.useSessionStorageForTbdaCache = !!sessionSessionData?.session && !localSessionData?.session;
+      const rows = await ensureTbdaCache(this.useSessionStorageForTbdaCache);
       this.tbdaRows = rows;
       this.rooms = getTbdaClassrooms(rows);
     } catch {
@@ -173,7 +178,10 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.hasDuplicateSavedAttendance(selectedRoom, this.selectedMonth, this.selectedDay)) {
+    const existingAttendance = this.findSavedAttendance(selectedRoom, this.selectedMonth, this.selectedDay)
+      ?? this.findTbdaAttendance(selectedRoom, this.selectedMonth, this.selectedDay);
+
+    if (existingAttendance) {
       const ref = this.dialog.open(AttendanceDuplicateWarningDialogComponent, {
         disableClose: true,
         hasBackdrop: true,
@@ -184,6 +192,12 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       const component = ref.componentInstance as AttendanceDuplicateWarningDialogComponent;
       component.room = selectedRoom;
       component.date = `${String(this.selectedDay || '').padStart(2, '0')}/${this.getMonthNumber(this.selectedMonth)}`;
+
+      ref.afterClosed().subscribe(confirmed => {
+        if (confirmed === true) {
+          this.openAttendanceModalForEdit(existingAttendance);
+        }
+      });
       return;
     }
 
@@ -199,6 +213,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       .filter(student => student.name)
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     this.isAttendanceModalOpen = true;
+    this.cdr.detectChanges();
   }
 
   public openAttendanceModalForEdit(attendance: AttendanceCacheEntry): void {
@@ -227,6 +242,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
           .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
     this.isAttendanceModalOpen = true;
+    this.cdr.detectChanges();
   }
 
   public closeAttendanceModal(): void {
@@ -256,8 +272,32 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.closeAttendanceModal();
   }
 
-  public deleteSavedAttendance(savedAt: number): void {
-    this.savedAttendances = removeAttendanceCacheEntry(savedAt);
+  public async deleteSavedAttendance(attendance: AttendanceCacheEntry): Promise<void> {
+    const ref = this.dialog.open(AttendanceDeleteConfirmDialogComponent, {
+      disableClose: true,
+      hasBackdrop: true,
+      maxWidth: 'calc(100vw - 32px)',
+      panelClass: 'attendance-delete-confirm-dialog',
+    });
+
+    const component = ref.componentInstance as AttendanceDeleteConfirmDialogComponent;
+    component.room = this.getSavedAttendanceTitle(attendance);
+    component.date = this.formatSavedAttendanceDate(attendance);
+
+    if (await ref.afterClosed().toPromise() === true) {
+      this.deletingAttendanceSavedAt = attendance.savedAt;
+      this.cdr.detectChanges();
+
+      window.setTimeout(() => {
+        this.savedAttendances = this.savedAttendances.filter(entry =>
+          Number(entry.savedAt) !== Number(attendance.savedAt),
+        );
+        removeAttendanceCacheEntry(attendance.savedAt);
+        this.deletingAttendanceSavedAt = null;
+        this.cdr.markForCheck();
+        this.cdr.detectChanges();
+      }, 220);
+    }
   }
 
   public async confirmAndSendSavedAttendances(): Promise<void> {
@@ -300,6 +340,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     });
     this.cdr.detectChanges();
 
+    let tbdaCacheRefreshed = false;
     try {
       const result = await sendAttendanceCacheToTbda((update) => {
         progressInstance.applyUpdate({
@@ -319,6 +360,23 @@ export class ChamadaComponent implements OnInit, OnDestroy {
         console.error('[chamada] failed to send attendance cache', result.errors);
       }
 
+      progressInstance.applyUpdate({
+        total: result.total,
+        processed: result.processed,
+        sent: result.success,
+        failed: result.failed,
+        currentEntryLabel: 'Atualizando dados da chamada... ',
+        sentEntries: result.sentEntries,
+        failedEntries: result.failedEntries,
+      });
+      this.cdr.detectChanges();
+
+      this.tbdaRows = await syncTbdaCache(
+        this.useSessionStorageForTbdaCache,
+        rows => this.confirmAttendanceRows(rows, this.savedAttendances),
+      );
+      this.rooms = getTbdaClassrooms(this.tbdaRows);
+      tbdaCacheRefreshed = true;
       this.loadSavedAttendances();
       this.cdr.markForCheck();
 
@@ -331,11 +389,13 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('[chamada] failed to send attendance cache', error);
     } finally {
-      this.isSendingSavedAttendances = false;
-      this.cdr.markForCheck();
-      try {
-        progressRef.close();
-      } catch {}
+      if (tbdaCacheRefreshed) {
+        this.isSendingSavedAttendances = false;
+        this.cdr.markForCheck();
+        try {
+          progressRef.close();
+        } catch {}
+      }
     }
   }
 
@@ -449,20 +509,72 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   private tbdaRows: Record<string, unknown>[] = [];
 
   private hasDuplicateSavedAttendance(room: string, monthName: string, day: string): boolean {
+    return this.findSavedAttendance(room, monthName, day) !== null;
+  }
+
+  private findSavedAttendance(room: string, monthName: string, day: string): AttendanceCacheEntry | null {
     const normalizedRoom = String(room ?? '').trim();
     const normalizedMonth = normalizeAttendanceMonth(monthName);
     const normalizedDay = String(day ?? '').trim();
 
     if (!normalizedRoom || !normalizedMonth || !normalizedDay) {
-      return false;
+      return null;
     }
 
-    return getAttendanceCache().some(entry => {
+    return getAttendanceCache().find(entry => {
       const sameRoom = String(entry.room ?? '').trim() === normalizedRoom;
       const sameMonth = String(entry.month ?? '').trim() === normalizedMonth;
       const sameDay = String(entry.day ?? '').trim() === normalizedDay;
       return sameRoom && sameMonth && sameDay;
-    });
+    }) ?? null;
+  }
+
+  private findTbdaAttendance(room: string, monthName: string, day: string): AttendanceCacheEntry | null {
+    const normalizedRoom = String(room ?? '').trim();
+    const month = normalizeAttendanceMonth(monthName);
+    const dayColumn = String(day ?? '').trim();
+
+    if (!normalizedRoom || !month || !dayColumn) {
+      return null;
+    }
+
+    const roomRows = this.tbdaRows.filter(row => this.getRowText(row, 'TURMA') === normalizedRoom);
+    const rowsWithAttendance = roomRows.filter(row => this.getAttendanceStatus(row[dayColumn], month) !== null);
+    if (!rowsWithAttendance.length) {
+      return null;
+    }
+
+    return {
+      room: normalizedRoom,
+      series: this.parseSeries(normalizedRoom),
+      className: this.parseClassName(normalizedRoom),
+      month,
+      day: dayColumn,
+      savedAt: Date.now(),
+      students: roomRows
+        .map(row => ({
+          name: this.getRowText(row, 'NOME'),
+          registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
+          status: this.getAttendanceStatus(row[dayColumn], month) ?? 'P' as const,
+        }))
+        .filter(student => student.name)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    };
+  }
+
+  private getAttendanceStatus(value: unknown, month: string): AttendanceStatus {
+    const monthNumber = normalizeAttendanceMonth(month);
+    const tokenPattern = new RegExp(`(?:^|,)\\s*(P|FNJ|FJ):${monthNumber}(?:\\s*,|$)`);
+    const match = String(value ?? '').match(tokenPattern);
+    return (match?.[1] as AttendanceStatus) ?? null;
+  }
+
+  private confirmAttendanceRows(rows: Record<string, unknown>[], entries: AttendanceCacheEntry[]): boolean {
+    return entries.every(entry => getAttendanceRegistrationPayloadsForEntry(entry).every(payload => {
+      const row = rows.find(candidate => this.getRowText(candidate, 'MAT', 'MATRICULA', 'MATRÍCULA') === payload.mat);
+      const cell = row?.[String(payload.dia)] ?? row?.[String(payload.dia).toLowerCase()];
+      return String(cell ?? '').split(',').some(token => token.trim() === `${payload.presenca}:${payload.mes}`);
+    }));
   }
 
   private parseSeries(value: string): string {

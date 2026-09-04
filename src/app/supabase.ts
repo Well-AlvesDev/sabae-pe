@@ -85,7 +85,10 @@ export function getTbdaLastSearchLabel(): string {
   }
 }
 
-export async function syncTbdaCache(useSessionStorage = false): Promise<Record<string, unknown>[]> {
+export async function syncTbdaCache(
+  useSessionStorage = false,
+  validateRows?: (rows: Record<string, unknown>[]) => boolean,
+): Promise<Record<string, unknown>[]> {
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
   const result = await client
     .from(TBDA_TABLE_NAME)
@@ -98,6 +101,11 @@ export async function syncTbdaCache(useSessionStorage = false): Promise<Record<s
   const rows = Array.isArray(result.data)
     ? (result.data as unknown as Record<string, unknown>[])
     : [];
+
+  if (validateRows && !validateRows(rows)) {
+    throw new Error('Os dados de chamada enviados ainda não foram confirmados no TBDA.');
+  }
+
   const requestedAt = Date.now();
   const payload: TbdaCachePayload = {
     version: TBDA_CACHE_VERSION,
@@ -337,14 +345,20 @@ export async function sendAttendanceCacheToTbda(
 
     const result = rpcResult.data as { success: number; failed: number; errors: string[] };
 
-    if (result.failed === 0) {
+    if (result.failed === 0 && result.success === attendancePayload.length) {
       success += 1;
       sentEntries.push(currentEntryLabel);
       removeAttendanceCacheEntry(entry.savedAt);
     } else {
       failed += 1;
       failedEntries.push(currentEntryLabel);
-      errors.push(...(result.errors ?? []).map(error => `${currentEntryLabel}: ${error}`));
+      const responseErrors = result.errors ?? [];
+      errors.push(
+        ...(responseErrors.length
+          ? responseErrors
+          : [`A RPC confirmou ${result.success} de ${attendancePayload.length} registros para ${currentEntryLabel}.`]
+        ).map(error => `${currentEntryLabel}: ${error}`),
+      );
     }
 
     processed += 1;

@@ -126,7 +126,8 @@
                 <span *ngIf="isSendingSavedAttendances">Enviando...</span>
             </button>
 
-            <article class="saved-attendance-card" *ngFor="let attendance of savedAttendances">
+            <article class="saved-attendance-card" *ngFor="let attendance of savedAttendances"
+                [class.is-deleting]="deletingAttendanceSavedAt === attendance.savedAt">
                 <div class="saved-attendance-topline">
                     <strong class="saved-attendance-title">{{ getSavedAttendanceTitle(attendance) }}</strong>
                 </div>
@@ -143,8 +144,12 @@
                         <span class="material-icons" aria-hidden="true">edit</span>
                     </button>
                     <button class="saved-attendance-delete" type="button" aria-label="Excluir chamada"
-                        (click)="deleteSavedAttendance(attendance.savedAt)">
-                        <span class="material-icons" aria-hidden="true">delete</span>
+                        [disabled]="deletingAttendanceSavedAt === attendance.savedAt"
+                        (click)="deleteSavedAttendance(attendance)">
+                        <span class="material-icons" aria-hidden="true"
+                            *ngIf="deletingAttendanceSavedAt !== attendance.savedAt">delete</span>
+                        <mat-progress-spinner *ngIf="deletingAttendanceSavedAt === attendance.savedAt" diameter="20"
+                            strokeWidth="3" mode="indeterminate" aria-label="Excluindo chamada"></mat-progress-spinner>
                     </button>
                 </div>
 
@@ -216,7 +221,7 @@
         <span class="material-icons">assignment</span>
         <span class="label">Chamada</span>
     </button>
-    <a class="nav-item" href="#" aria-label="Relatórios">
+    <a class="nav-item" routerLink="/relatorios" aria-label="Relatórios">
         <span class="material-icons">bar_chart</span>
         <span class="label">Relatórios</span>
     </a>

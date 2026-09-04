@@ -258,17 +258,20 @@ export class AttendanceProgressDialogComponent {
       </div>
 
       <p>
-        Já existe uma chamada salva localmente para a sala <strong>{{ room }}</strong> na data <strong>{{ date }}</strong>.
+        Já existe uma chamada para a sala <strong>{{ room }}</strong> na data <strong>{{ date }}</strong>.
       </p>
 
       <p class="dialog-subtext">
-        Edite a chamada salva ou exclua antes de registrar outra para o mesmo período.
+        Você pode editar essa chamada ou cancelar o novo registro.
       </p>
 
       <div class="dialog-actions">
-        <button mat-flat-button color="primary" type="button" (click)="onClose()">
-          <mat-icon aria-hidden="true">check</mat-icon>
-          Entendi
+        <button mat-stroked-button type="button" (click)="onClose()">
+          Cancelar
+        </button>
+        <button mat-flat-button color="primary" type="button" (click)="onEdit()">
+          <mat-icon aria-hidden="true">edit</mat-icon>
+          Sim, editar
         </button>
       </div>
     </div>
@@ -316,6 +319,24 @@ export class AttendanceProgressDialogComponent {
       .dialog-actions {
         display: flex;
         justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .dialog-actions button {
+        min-width: 108px;
+      }
+
+      @media (max-width: 360px) {
+        .dialog-actions {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+
+        .dialog-actions button {
+          width: 100%;
+        }
       }
     `,
   ],
@@ -327,6 +348,116 @@ export class AttendanceDuplicateWarningDialogComponent {
   constructor(private dialogRef: MatDialogRef<AttendanceDuplicateWarningDialogComponent>) {}
 
   onClose(): void {
-    this.dialogRef.close();
+    this.dialogRef.close(false);
+  }
+
+  onEdit(): void {
+    this.dialogRef.close(true);
+  }
+}
+
+@Component({
+  selector: 'app-attendance-delete-confirm-dialog',
+  standalone: true,
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  template: `
+    <div class="attendance-delete-confirm-dialog">
+      <div class="dialog-header">
+        <span class="material-icons" aria-hidden="true">delete</span>
+        <h3>Excluir chamada?</h3>
+      </div>
+
+      <p>
+        Deseja excluir a chamada de <strong>{{ room }}</strong> na data <strong>{{ date }}</strong>?
+      </p>
+
+      <p class="dialog-subtext">Essa ação removerá a chamada das prontas para envio.</p>
+
+      <div class="dialog-actions">
+        <button mat-stroked-button type="button" (click)="onCancel()">Cancelar</button>
+        <button mat-flat-button color="warn" type="button" (click)="onConfirm()">
+          <mat-icon aria-hidden="true">delete</mat-icon>
+          Excluir
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [
+    `
+      .attendance-delete-confirm-dialog {
+        width: min(380px, calc(100vw - 32px));
+        box-sizing: border-box;
+        padding: 20px 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .dialog-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .dialog-header .material-icons {
+        font-size: 28px;
+        color: #d32f2f;
+      }
+
+      .dialog-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #212121;
+      }
+
+      .attendance-delete-confirm-dialog p {
+        margin: 0;
+        color: #424242;
+        line-height: 1.5;
+      }
+
+      .dialog-subtext {
+        color: #5f6368;
+        font-size: 0.92rem;
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .dialog-actions button {
+        min-width: 108px;
+      }
+
+      @media (max-width: 360px) {
+        .dialog-actions {
+          flex-direction: column-reverse;
+          align-items: stretch;
+        }
+
+        .dialog-actions button {
+          width: 100%;
+        }
+      }
+    `,
+  ],
+})
+export class AttendanceDeleteConfirmDialogComponent {
+  public room = '';
+  public date = '';
+
+  constructor(private dialogRef: MatDialogRef<AttendanceDeleteConfirmDialogComponent>) {}
+
+  public onCancel(): void {
+    this.dialogRef.close(false);
+  }
+
+  public onConfirm(): void {
+    this.dialogRef.close(true);
   }
 }
