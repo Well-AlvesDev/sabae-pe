@@ -46,14 +46,14 @@ export class LoginComponent implements OnInit {
     const hour = new Date().getHours();
 
     if (hour < 12) {
-      return 'bom dia! ☀️';
+      return 'bom dia!';
     }
 
     if (hour < 18) {
-      return 'boa tarde! 🌤️';
+      return 'boa tarde!';
     }
 
-    return 'boa noite! 🌙';
+    return 'boa noite!';
   }
 
   async ngOnInit(): Promise<void> {
