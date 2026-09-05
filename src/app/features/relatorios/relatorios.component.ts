@@ -203,7 +203,8 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
       });
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Chamada');
-      XLSX.writeFile(workbook, `chamada-${this.slugify(this.selectedMonth)}-${this.slugify(this.selectedShift)}.xlsx`);
+      const roomSuffix = this.selectedRoom ? `-${this.slugify(this.selectedRoom)}` : '';
+      XLSX.writeFile(workbook, `chamada-${this.slugify(this.selectedMonth)}-${this.slugify(this.selectedShift)}${roomSuffix}.xlsx`);
     } finally {
       this.isGeneratingReport = false;
     }
