@@ -31,6 +31,7 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 })
 export class LoginComponent implements OnInit {
   hidePassword = true;
+  greeting = this.getGreeting();
   loginData = {
     email: '',
     password: '',
@@ -40,6 +41,20 @@ export class LoginComponent implements OnInit {
   isSubmitting = false;
 
   constructor(private cdr: ChangeDetectorRef, private router: Router) {}
+
+  private getGreeting(): string {
+    const hour = new Date().getHours();
+
+    if (hour < 12) {
+      return 'bom dia! ☀️';
+    }
+
+    if (hour < 18) {
+      return 'boa tarde! 🌤️';
+    }
+
+    return 'boa noite! 🌙';
+  }
 
   async ngOnInit(): Promise<void> {
     const [{ data: localData }, { data: sessionData }] = await Promise.all([

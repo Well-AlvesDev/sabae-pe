@@ -3,3 +3,35 @@
   height: 100vh;
   overflow: hidden;
 }
+
+.navigation-loading {
+  position: fixed;
+  left: 12px;
+  bottom: 80px;
+  z-index: 1200;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 12px;
+  border-radius: 1px;
+  background: #e7f1ffac;
+  box-shadow: 0 2px 10px rgba(21, 34, 48, 0.2);
+  color: #0a2a46;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.navigation-loading--login {
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.navigation-loading mat-progress-spinner {
+  flex: 0 0 auto;
+  --mdc-circular-progress-active-indicator-color: #3478c8;
+}

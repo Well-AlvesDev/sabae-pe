@@ -1,3 +1,11 @@
 <main>
     <router-outlet></router-outlet>
 </main>
+
+@if (isNavigationLoading()) {
+<div class="navigation-loading" [class.navigation-loading--login]="isLoginNavigation()" role="status"
+    aria-live="polite">
+    <mat-progress-spinner diameter="18" strokeWidth="3" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
+    <span>Aguarde um momento, executando...</span>
+</div>
+}
