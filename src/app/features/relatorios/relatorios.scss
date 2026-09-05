@@ -134,21 +134,17 @@
   justify-content: center;
   gap: 10px;
   min-height: 42px;
-  border: 1px solid #3478c8;
-  border-radius: 10px;
+  border-radius: 20px;
   padding: 5px 18px;
-  background: transparent;
-  color: #2464a8;
+  background: #34b447;
+  color: #f1f7fd;
   cursor: pointer;
   font: inherit;
   font-size: 1.05rem;
-  font-weight: 700;
+  font-weight: 600;
   transition: background-color 160ms ease, color 160ms ease, opacity 160ms ease;
 }
 
-.primary-button:hover:not(:disabled) {
-  background: #e8f1fb;
-}
 
 .primary-button:disabled {
   cursor: not-allowed;

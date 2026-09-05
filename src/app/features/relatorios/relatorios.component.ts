@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
@@ -21,7 +22,7 @@ type ReportRow = Record<string, string>;
 @Component({
   selector: 'app-relatorios',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule, RouterLink],
+  imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule, RouterLink],
   templateUrl: './relatorios.html',
   styleUrls: ['./relatorios.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -47,8 +48,9 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
   private tbdaRows: Record<string, unknown>[] = [];
   private authSub1: any;
   private authSub2: any;
+  private _logoutDialogOpen = false;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
   async ngOnInit(): Promise<void> {
     try {
@@ -110,6 +112,32 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
   public goToHome(): void {
     this.closeMenu();
     this.router.navigateByUrl('/home');
+  }
+
+  public async logout(): Promise<void> {
+    if (this._logoutDialogOpen) {
+      return;
+    }
+
+    this._logoutDialogOpen = true;
+    try {
+      const { LogoutConfirmDialogComponent } = await import('../home/logout-confirm.dialog');
+      const ref = this.dialog.open(LogoutConfirmDialogComponent, {
+        disableClose: true,
+        hasBackdrop: true,
+        maxWidth: 'calc(100vw - 32px)',
+        panelClass: 'legacy-logout-dialog',
+      });
+
+      try {
+        const confirmed = await ref.afterClosed().toPromise();
+        if (confirmed === true) {
+          this.closeMenu();
+        }
+      } catch {}
+    } finally {
+      this._logoutDialogOpen = false;
+    }
   }
 
   public generateReport(): void {
