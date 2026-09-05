@@ -90,9 +90,10 @@
             <p class="registrations-hint">Deixe vazio para usar ordenação padrão do sistema (por sala e nome)</p>
         </div>
 
-        <button class="primary-button" type="button" [disabled]="!canGenerateReport" (click)="generateReport()">
+        <button class="primary-button" type="button" [disabled]="!canGenerateReport" (click)="generateReport()"
+            [attr.aria-busy]="isGeneratingReport">
             <span class="material-icons" aria-hidden="true">table_view</span>
-            <span>Gerar planilha</span>
+            <span>{{ isGeneratingReport ? 'Gerando planilha...' : 'Gerar planilha' }}</span>
         </button>
     </section>
 </main>
