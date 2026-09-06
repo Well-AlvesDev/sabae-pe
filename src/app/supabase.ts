@@ -203,11 +203,10 @@ export function appendAttendanceCellValue(existingValue: unknown, status: Attend
     .map(value => value.trim())
     .filter(Boolean);
 
-  if (values.includes(token)) {
-    return values.join(',');
-  }
+  const monthTokenPattern = new RegExp(`^(?:P|FNJ|FJ):${normalizedMonth}$`);
+  const withoutCurrentMonth = values.filter(value => !monthTokenPattern.test(value));
 
-  return [...values, token].join(',');
+  return [...withoutCurrentMonth, token].join(',');
 }
 
 export type AttendanceSendProgressUpdate = {

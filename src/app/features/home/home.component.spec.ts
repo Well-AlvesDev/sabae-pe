@@ -160,4 +160,8 @@ describe('HomeComponent performance status', () => {
     expect(cached.students[0].registration).toBe('3003');
     expect(appendAttendanceCellValue('FNJ:2', 'P', 8)).toBe('FNJ:2,P:8');
   });
+
+  it('should replace the status for the edited month without changing other months', () => {
+    expect(appendAttendanceCellValue('P:8,FNJ:7', 'FJ', 8)).toBe('FNJ:7,FJ:8');
+  });
 });

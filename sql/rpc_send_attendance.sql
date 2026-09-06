@@ -14,7 +14,7 @@ DECLARE
   v_failed INT := 0;
   v_errors TEXT[] := ARRAY[]::TEXT[];
   v_item JSONB;
-  v_mat INT;
+  v_mat TEXT;
   v_dia INT;
   v_mes INT;
   v_presenca TEXT;
@@ -34,7 +34,7 @@ BEGIN
     SELECT jsonb_array_elements(attendance_data)
   LOOP
     -- Extrair dados do item
-    v_mat := (v_item->>'mat')::INT;
+    v_mat := NULLIF(TRIM(v_item->>'mat'), '');
     v_dia := (v_item->>'dia')::INT;
     v_mes := (v_item->>'mes')::INT;
     v_presenca := v_item->>'presenca';
@@ -68,7 +68,7 @@ BEGIN
     INTO v_existing_value
     FROM (
       SELECT jsonb_object_agg(key, value) AS tbda_row
-      FROM jsonb_each_text((SELECT row_to_json(t.*)::JSONB FROM "TBDA" t WHERE "MAT" = v_mat LIMIT 1))
+      FROM jsonb_each_text((SELECT row_to_json(t.*)::JSONB FROM "TBDA" t WHERE TRIM("MAT"::TEXT) = v_mat LIMIT 1))
     ) subq;
 
     -- Se não achou a matrícula
@@ -78,20 +78,22 @@ BEGIN
       CONTINUE;
     END IF;
 
-    -- Montar novo valor (append presença + mês)
-    IF v_existing_value = '' THEN
-      v_new_value := v_presenca || ':' || v_mes::TEXT;
-    ELSE
-      -- Verificar se já existe este token
-      IF v_existing_value LIKE '%' || v_presenca || ':' || v_mes::TEXT || '%' THEN
-        v_new_value := v_existing_value;
-      ELSE
-        v_new_value := v_existing_value || ',' || v_presenca || ':' || v_mes::TEXT;
-      END IF;
+    -- Substituir o status deste mês e preservar os status dos demais meses.
+    v_new_value := regexp_replace(
+      v_existing_value,
+      '(^|,)[[:space:]]*(P|FNJ|FJ):' || v_mes::TEXT || '([[:space:]]*,|$)',
+      '\1' || v_presenca || ':' || v_mes::TEXT || '\3'
+    );
+
+    IF v_new_value = v_existing_value THEN
+      v_new_value := CASE
+        WHEN v_existing_value = '' THEN v_presenca || ':' || v_mes::TEXT
+        ELSE v_existing_value || ',' || v_presenca || ':' || v_mes::TEXT
+      END;
     END IF;
 
     -- Executar update
-    EXECUTE format('UPDATE "TBDA" SET %I = %L WHERE "MAT" = %L', v_day_column, v_new_value, v_mat);
+    EXECUTE format('UPDATE "TBDA" SET %I = %L WHERE TRIM("MAT"::TEXT) = %L', v_day_column, v_new_value, v_mat);
 
     GET DIAGNOSTICS v_update_result = ROW_COUNT;
 
@@ -99,7 +101,7 @@ BEGIN
       v_success := v_success + 1;
     ELSE
       v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Falha ao atualizar matrícula ' || v_mat::TEXT);
+      v_errors := array_append(v_errors, 'Falha ao atualizar matrícula ' || v_mat);
     END IF;
 
   END LOOP;
