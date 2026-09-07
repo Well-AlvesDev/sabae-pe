@@ -22,7 +22,10 @@ import {
   supabaseWithSessionStorage,
   updateAttendanceCacheEntry,
   type AttendanceCacheEntry,
+  type SentAttendanceReference,
 } from '../../supabase';
+
+const RELATORIOS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbw6oIY48yjGPDiPAAqWM3Sk1m26LN0rKVA5OcdyD6wVVgvNNuSb3959gDUkA3rtKMWN/exec';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ' | null;
 
@@ -377,6 +380,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       );
       this.rooms = getTbdaClassrooms(this.tbdaRows);
       tbdaCacheRefreshed = true;
+      await this.syncSentAttendancesToSpreadsheet(result.sentAttendances);
       this.loadSavedAttendances();
       this.cdr.markForCheck();
 
@@ -396,6 +400,27 @@ export class ChamadaComponent implements OnInit, OnDestroy {
           progressRef.close();
         } catch {}
       }
+    }
+  }
+
+  private async syncSentAttendancesToSpreadsheet(entries: SentAttendanceReference[]): Promise<void> {
+    if (!entries.length) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 30_000);
+
+    try {
+      await fetch(RELATORIOS_SCRIPT_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'sincronizarChamadas', calls: entries }),
+        signal: controller.signal,
+      });
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 

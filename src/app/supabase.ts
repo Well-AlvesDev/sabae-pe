@@ -220,6 +220,8 @@ export type AttendanceSendProgressUpdate = {
   completed: boolean;
 };
 
+export type SentAttendanceReference = Pick<AttendanceCacheEntry, 'room' | 'month' | 'day'>;
+
 export function getAttendanceEntryLabel(entry: AttendanceCacheEntry): string {
   const room = String(entry.room ?? '').trim();
   const series = String(entry.series ?? '').trim();
@@ -257,12 +259,12 @@ export function getAttendanceRegistrationPayloads(): Array<{ savedAt: number; di
 
 export async function sendAttendanceCacheToTbda(
   onProgress?: (update: AttendanceSendProgressUpdate) => void,
-): Promise<{ success: number; failed: number; errors: string[]; sentEntries: string[]; failedEntries: string[]; total: number; processed: number }> {
+): Promise<{ success: number; failed: number; errors: string[]; sentEntries: string[]; sentAttendances: SentAttendanceReference[]; failedEntries: string[]; total: number; processed: number }> {
   const cacheEntries = getAttendanceCache();
   const total = cacheEntries.length;
 
   if (total === 0) {
-    return { success: 0, failed: 0, errors: [], sentEntries: [], failedEntries: [], total: 0, processed: 0 };
+    return { success: 0, failed: 0, errors: [], sentEntries: [], sentAttendances: [], failedEntries: [], total: 0, processed: 0 };
   }
 
   let processed = 0;
@@ -270,6 +272,7 @@ export async function sendAttendanceCacheToTbda(
   let failed = 0;
   const errors: string[] = [];
   const sentEntries: string[] = [];
+  const sentAttendances: SentAttendanceReference[] = [];
   const failedEntries: string[] = [];
 
   onProgress?.({
@@ -347,6 +350,7 @@ export async function sendAttendanceCacheToTbda(
     if (result.failed === 0 && result.success === attendancePayload.length) {
       success += 1;
       sentEntries.push(currentEntryLabel);
+      sentAttendances.push({ room: entry.room, month: entry.month, day: entry.day });
       removeAttendanceCacheEntry(entry.savedAt);
     } else {
       failed += 1;
@@ -379,6 +383,7 @@ export async function sendAttendanceCacheToTbda(
     failed,
     errors,
     sentEntries,
+    sentAttendances,
     failedEntries,
     total,
     processed,
