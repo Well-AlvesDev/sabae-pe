@@ -1,0 +1,173 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+    <div class="leading">
+        <button class="icon-button menu-button" type="button" aria-label="Abrir menu" (click)="toggleMenu()">
+            <span class="material-icons">menu</span>
+        </button>
+        <a class="brand" routerLink="/home" aria-label="Voltar para o início">
+            <img src="/sabae-max.webp" alt="SABAE logo" class="app-bar-logo">
+        </a>
+    </div>
+    <div class="actions">
+        <div class="profile-avatar" [class.loading]="isLoadingProfile()"
+            [attr.aria-label]="isLoadingProfile() ? 'Carregando perfil do usuário' : 'Perfil de ' + userName()">
+            @if (!isLoadingProfile()) {
+            <span>{{ avatarInitial() }}</span>
+            } @else {
+            <mat-spinner diameter="22" aria-label="Carregando perfil"></mat-spinner>
+            }
+        </div>
+        <button class="icon-button" type="button" aria-label="Notificações">
+            <span class="material-icons">notifications</span>
+        </button>
+    </div>
+</header>
+
+<div class="drawer-backdrop" *ngIf="isMenuOpen()" (click)="closeMenu()" aria-hidden="true"></div>
+<nav class="side-drawer" [class.open]="isMenuOpen()" aria-label="Menu lateral">
+    <div class="drawer-header" style="background-image: url('/lines.png')">
+        <div class="drawer-overlay"></div>
+        <div class="drawer-profile">
+            <div class="drawer-avatar" [class.loading]="isLoadingProfile()"
+                [attr.aria-label]="isLoadingProfile() ? 'Carregando perfil do usuário' : 'Perfil de ' + userName()">
+                @if (!isLoadingProfile()) {
+                <span>{{ avatarInitial() }}</span>
+                } @else {
+                <mat-spinner diameter="34" aria-label="Carregando perfil"></mat-spinner>
+                }
+            </div>
+            <div class="drawer-text">
+                <div class="drawer-title">NOME DA ESCOLA</div>
+                <div class="drawer-subtitle">{{ userEmail() }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="drawer-items">
+        <a class="drawer-item" href="#">
+            <span class="material-icons">settings</span>
+            Configurações
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">support_agent</span>
+            Suporte
+        </a>
+        <a class="drawer-item" href="#">
+            <span class="material-icons">security</span>
+            Segurança
+        </a>
+        <button class="drawer-item logout-button" type="button" (click)="logout()">
+            <span class="material-icons">exit_to_app</span>
+            Sair
+        </button>
+    </div>
+</nav>
+
+<main class="alunos-content">
+    <section class="alunos-panel" aria-labelledby="alunos-title">
+        <div class="page-intro">
+            <div>
+                <p class="eyebrow">Acompanhamento de frequência</p>
+                <h1 id="alunos-title">Alunos com mais faltas</h1>
+                <p class="intro-copy">Consulte quem precisa de mais atenção por mês e turma.</p>
+            </div>
+        </div>
+
+        <div class="filters" aria-label="Filtros da lista de alunos">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Mês</mat-label>
+                <mat-select [value]="selectedMonth()" (selectionChange)="setMonth($event.value)"
+                    aria-label="Escolha o mês">
+                    @for (month of months; track month.value) {
+                    <mat-option [value]="month.value">{{ month.label }}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Turma</mat-label>
+                <mat-select [value]="selectedRoom()" (selectionChange)="setRoom($event.value)"
+                    aria-label="Escolha a turma">
+                    <mat-option value="all">Todas as turmas</mat-option>
+                    @for (room of rooms(); track room) {
+                    <mat-option [value]="room">{{ room }}</mat-option>
+                    }
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        @if (isLoading()) {
+        <div class="state-panel" role="status" aria-live="polite">
+            <mat-spinner diameter="40" aria-label="Carregando alunos"></mat-spinner>
+            <span>Carregando alunos...</span>
+        </div>
+        } @else if (hasError()) {
+        <div class="state-panel" role="alert">
+            <span class="material-icons" aria-hidden="true">cloud_off</span>
+            <strong>Não foi possível carregar os alunos.</strong>
+            <span>Atualize a página e tente novamente.</span>
+        </div>
+        } @else if (!students().length) {
+        <div class="state-panel" aria-live="polite">
+            <span class="material-icons" aria-hidden="true">task_alt</span>
+            <strong>Nenhum aluno com 2 ou mais faltas</strong>
+            <span>Não há alunos com 2 ou mais faltas em {{ monthLabel() }} nesta seleção.</span>
+        </div>
+        } @else {
+        <div class="list-heading">
+            <div>
+                <h2>Ranking de faltas</h2>
+                <span>{{ students().length }} aluno{{ students().length === 1 ? '' : 's' }} com faltas em {{
+                    monthLabel() }}</span>
+            </div>
+        </div>
+        <mat-list class="student-list" aria-label="Alunos ordenados por número de faltas">
+            @for (student of paginatedStudents(); track student.registration || student.name) {
+            <mat-list-item class="student-item">
+                <span matListItemTitle>{{ student.name }}</span>
+                <span matListItemLine>{{ student.room }}{{ student.registration ? ' • Matrícula ' + student.registration
+                    : '' }}</span>
+                <span class="absence-total" [class.warning]="student.total >= 3 && student.total <= 6"
+                    [class.danger]="student.total > 6" matListItemMeta
+                    [attr.aria-label]="student.total + ' faltas no mês'">
+                    <strong>{{ student.total }}</strong>
+                    <small>faltas</small>
+                </span>
+                <span class="absence-breakdown" aria-label="Detalhamento das faltas">
+                    <span class="unjustified">{{ student.unjustified }} FNJ</span>
+                    <span class="justified">{{ student.justified }} FJ</span>
+                </span>
+            </mat-list-item>
+            }
+        </mat-list>
+        <nav class="pagination" aria-label="Paginação da lista de alunos">
+            <button class="pagination-button" type="button" aria-label="Página anterior"
+                [disabled]="currentPage() === 1" (click)="previousPage()">
+                <span class="material-icons" aria-hidden="true">chevron_left</span>
+            </button>
+            <span class="pagination-status" aria-live="polite">Página {{ currentPage() }} de {{ totalPages() }}</span>
+            <button class="pagination-button" type="button" aria-label="Próxima página"
+                [disabled]="currentPage() === totalPages()" (click)="nextPage()">
+                <span class="material-icons" aria-hidden="true">chevron_right</span>
+            </button>
+        </nav>
+        }
+    </section>
+</main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+    <a routerLink="/home" class="nav-item" aria-label="Início">
+        <span class="material-icons">home</span><span class="label">Início</span>
+    </a>
+    <a routerLink="/chamada" class="nav-item" aria-label="Chamada">
+        <span class="material-icons">assignment</span><span class="label">Chamada</span>
+    </a>
+    <a routerLink="/planilhas" class="nav-item" aria-label="Planilhas">
+        <span class="material-icons">bar_chart</span><span class="label">Planilhas</span>
+    </a>
+    <a routerLink="/alunos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"
+        aria-current="page" aria-label="Alunos">
+        <span class="material-icons">people</span><span class="label">Alunos</span>
+    </a>
+    <a class="nav-item" href="#" aria-label="Perfil">
+        <span class="material-icons">account_circle</span><span class="label">Perfil</span>
+    </a>
+</nav>

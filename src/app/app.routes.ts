@@ -25,5 +25,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { reuse: true },
   },
+  {
+    path: 'alunos',
+    loadComponent: () => import('./features/alunos/alunos.component').then(m => m.AlunosComponent),
+    canActivate: [authGuard],
+    data: { reuse: true },
+  },
   { path: '**', redirectTo: 'login' },
 ];
