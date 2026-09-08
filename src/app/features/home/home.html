@@ -185,7 +185,7 @@
     <section class="overview-card monthly-attendance-card" aria-label="Presença por mês">
       <div class="card-title">
         <span class="material-icons">show_chart</span>
-        <strong>Presença por mês</strong>
+        <strong>Gráfico de linha percentual de presença mensal</strong>
       </div>
       <div class="monthly-chart-legend" aria-label="Legenda do gráfico">
         <span class="monthly-legend-item">
@@ -200,17 +200,25 @@
           <span class="monthly-legend-square trend-same" aria-hidden="true"></span>
           <span>Sem alteração</span>
         </span>
+        <span class="monthly-legend-item">
+          <span class="monthly-legend-square no-data" aria-hidden="true"></span>
+          <span>Sem registros</span>
+        </span>
       </div>
       <p class="monthly-chart-hint">
         Clique em uma linha ou ponto do gráfico para visualizar os detalhes do mês.
       </p>
       <div class="monthly-classroom-filter">
-        <label for="monthly-classroom-select">Turma do gráfico</label>
-        <select id="monthly-classroom-select" [value]="selectedMonthlyClassroom"
-          (change)="setMonthlyClassroomFilter($any($event.target).value)">
-          <option value="all">Todas</option>
-          <option *ngFor="let classroom of monthlyClassroomOptions" [value]="classroom">{{ classroom }}</option>
-        </select>
+        <mat-form-field class="material-select monthly-classroom-select" appearance="outline">
+          <mat-label>Turma do gráfico</mat-label>
+          <mat-select id="monthly-classroom-select" panelClass="compact-select-panel" [value]="selectedMonthlyClassroom"
+            (selectionChange)="setMonthlyClassroomFilter($event.value)" aria-label="Filtrar presença mensal por turma">
+            <mat-option value="all">Todas</mat-option>
+            <mat-option *ngFor="let classroom of monthlyClassroomOptions" [value]="classroom">
+              {{ classroom }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
       <div class="monthly-chart-wrapper" *ngIf="!isLoadingAttendanceScore; else monthlyChartLoading">
         <svg class="monthly-line-chart" viewBox="0 0 620 235" role="img"
@@ -224,15 +232,18 @@
           <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
             <line *ngIf="i > 0" class="monthly-line" [class.trend-up]="getMonthlyTrend(i) === 'up'"
               [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
-              [class.monthly-chart-active]="selectedMonthlyIndex === i" (mouseenter)="showMonthlyDetails(i)"
-              (focus)="showMonthlyDetails(i)" (click)="showMonthlyDetails(i)" tabindex="0" role="button"
-              [attr.aria-label]="'Detalhes da variação até ' + item.label" [attr.x1]="getMonthlyChartX(i - 1)"
+              [class.monthly-line-no-data]="hasMonthlyNoData(i)"
+              [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
+              role="button" [attr.aria-label]="'Detalhes da variação até ' + item.label"
+              [attr.x1]="getMonthlyChartX(i - 1)"
               [attr.y1]="getMonthlyChartY(monthlyAttendanceSummary[i - 1].presentPct)" [attr.x2]="getMonthlyChartX(i)"
               [attr.y2]="getMonthlyChartY(item.presentPct)"></line>
+          </ng-container>
+          <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
             <circle class="monthly-point" [class.trend-up]="getMonthlyTrend(i) === 'up'"
               [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
-              [class.monthly-chart-active]="selectedMonthlyIndex === i" (mouseenter)="showMonthlyDetails(i)"
-              (focus)="showMonthlyDetails(i)" (click)="showMonthlyDetails(i)" tabindex="0"
+              [class.monthly-point-no-data]="hasMonthlyPointNoData(i)"
+              [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
               [attr.cx]="getMonthlyChartX(i)" [attr.cy]="getMonthlyChartY(item.presentPct)" r="4"
               [attr.aria-label]="item.label + ': ' + item.presentPct + '% de presença'">
               <title>{{ item.label }}: {{ item.presentPct }}% de presença</title>
@@ -292,6 +303,19 @@
           <span class="material-icons">school</span>
           <strong>Situação por turma</strong>
         </div>
+        <div class="classroom-month-filter">
+          <mat-form-field class="material-select classroom-month-select" appearance="outline">
+            <mat-label>Período da situação</mat-label>
+            <mat-select id="classroom-month-select" panelClass="compact-select-panel" [value]="selectedClassroomMonth"
+              (selectionChange)="setClassroomMonthFilter($event.value)"
+              aria-label="Filtrar situação das turmas por mês">
+              <mat-option value="all">Todo período</mat-option>
+              <mat-option *ngFor="let month of classroomMonthOptions" [value]="month.value">
+                {{ month.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
 
         <div class="classroom-list" *ngIf="classroomSummary.length; else noClassroomSummary">
           <div [ngClass]="getClassroomItemClasses(i, classroomSummary.length)"
@@ -301,7 +325,7 @@
                 <span class="classroom-name">{{ classroom.name }}</span>
                 <span class="classroom-total">{{ classroom.total }} registros</span>
               </div>
-              <span class="classroom-status"
+              <span class="classroom-status" *ngIf="classroom.total > 0"
                 [ngClass]="{ 'good': getClassroomStatusLabel(classroom) === 'Ótimo' || getClassroomStatusLabel(classroom) === 'Bom', 'warning': getClassroomStatusLabel(classroom) === 'Regular', 'danger': getClassroomStatusLabel(classroom) === 'Atenção' }">
                 {{ getClassroomStatusLabel(classroom) }}
               </span>
@@ -311,6 +335,11 @@
               <span>P: {{ classroom.present }}</span>
               <span>FNJ: {{ classroom.fnj }}</span>
               <span>FJ: {{ classroom.fj }}</span>
+            </div>
+
+            <div class="classroom-no-records" *ngIf="classroom.total === 0">
+              <span class="material-icons" aria-hidden="true">info</span>
+              <span>Sem registros neste período até o momento.</span>
             </div>
 
             <div class="classroom-bar" aria-label="Distribuição da turma {{ classroom.name }}">

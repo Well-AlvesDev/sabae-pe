@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angula
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import {
   ensureTbdaCache,
@@ -16,7 +18,7 @@ import {
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, MatCardModule, RouterLink, RouterLinkActive, MatDialogModule, MatProgressSpinnerModule],
+  imports: [CommonModule, MatCardModule, RouterLink, RouterLinkActive, MatDialogModule, MatProgressSpinnerModule, MatFormFieldModule, MatSelectModule],
   templateUrl: './home.html',
   styleUrls: ['./home.scss', './home-classroom.scss'],
 })
@@ -46,6 +48,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   public monthlyClassroomOptions: string[] = [];
   public selectedMonthlyClassroom = 'all';
   public selectedMonthlyIndex: number | null = null;
+  public classroomMonthOptions: Array<{ value: string; label: string }> = [];
+  public selectedClassroomMonth = String(new Date().getMonth() + 1);
   private readonly monthLabels = [
     'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
@@ -195,7 +199,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.selectedMonthlyClassroom = 'all';
     }
     this.monthlyAttendanceSummary = this.buildMonthlyAttendanceSummary(rows, new Date().getMonth() + 1, this.selectedMonthlyClassroom);
-    this.classroomSummary = this.buildClassroomSummary(rows);
+    this.classroomMonthOptions = this.buildClassroomMonthOptions();
+    if (this.selectedClassroomMonth !== 'all' && !this.classroomMonthOptions.some(option => option.value === this.selectedClassroomMonth)) {
+      this.selectedClassroomMonth = 'all';
+    }
+    this.classroomSummary = this.buildClassroomSummary(rows, this.selectedClassroomMonth);
 
     const totalForScore = counts.present + counts.fnj;
     if (totalForScore === 0) {
@@ -273,6 +281,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.selectedMonthlyIndex = null;
   }
 
+  public setClassroomMonthFilter(month: string): void {
+    this.selectedClassroomMonth = month || 'all';
+    this.classroomSummary = this.buildClassroomSummary(this.attendanceRows, this.selectedClassroomMonth);
+  }
+
+  private buildClassroomMonthOptions(): Array<{ value: string; label: string }> {
+    const currentMonth = new Date().getMonth() + 1;
+    return Array.from({ length: currentMonth }, (_, index) => ({
+      value: String(index + 1),
+      label: this.fullMonthLabels[index],
+    }));
+  }
+
   public getMonthlyChartX(index: number): number {
     const chartWidth = 538;
     const chartStart = 42;
@@ -296,6 +317,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
 
     return current < previous ? 'down' : 'same';
+  }
+
+  public hasMonthlyNoData(index: number): boolean {
+    if (index <= 0) {
+      return false;
+    }
+
+    return (this.monthlyAttendanceSummary[index]?.total ?? 0) === 0;
+  }
+
+  public hasMonthlyPointNoData(index: number): boolean {
+    return (this.monthlyAttendanceSummary[index]?.total ?? 0) === 0;
   }
 
   public showMonthlyDetails(index: number): void {
@@ -328,7 +361,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.fullMonthLabels[this.monthlyAttendanceSummary[index]?.month - 1] ?? 'Mês';
   }
 
-  private buildClassroomSummary(rows: Record<string, unknown>[]) {
+  private buildClassroomSummary(rows: Record<string, unknown>[], month = 'all') {
     const summaryByClassroom = new Map<string, { present: number; fnj: number; fj: number }>();
 
     for (const row of rows) {
@@ -358,7 +391,9 @@ export class HomeComponent implements OnInit, OnDestroy {
           continue;
         }
 
-        const tokens = this.extractStatusTokens(value);
+        const tokens = month === 'all'
+          ? this.extractStatusTokens(value)
+          : this.extractStatusTokensForMonth(value, Number(month));
 
         for (const token of tokens) {
           if (token === 'P') counts.present += 1;
@@ -537,6 +572,12 @@ export class HomeComponent implements OnInit, OnDestroy {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
+  }
+
+  private extractStatusTokensForMonth(value: unknown, month: number): string[] {
+    const normalizedText = String(value ?? '').toUpperCase();
+    const monthPattern = new RegExp(`\\b(P|FNJ|FJ):${month}\\b`, 'g');
+    return Array.from(normalizedText.matchAll(monthPattern), match => match[1]);
   }
 
   public getSummaryDisplayValue(value: number, isLoading: boolean, suffix: string = ''): string {

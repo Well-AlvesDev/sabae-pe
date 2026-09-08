@@ -82,6 +82,20 @@
   font-weight: 600;
 }
 
+.classroom-no-records {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.classroom-no-records .material-icons {
+  flex: 0 0 auto;
+  font-size: 15px;
+}
+
 .classroom-bar {
   position: relative;
   display: flex;
