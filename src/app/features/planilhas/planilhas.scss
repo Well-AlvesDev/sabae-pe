@@ -186,6 +186,7 @@
   .planilhas-content {
     padding-right: 16px;
     padding-left: 16px;
+    padding-bottom: 150px;
   }
 
   .planilhas-panel h1 {
@@ -195,5 +196,11 @@
 
   .primary-button {
     width: 100%;
+  }
+}
+
+@media (max-width: 440px) {
+  .planilhas-content {
+    padding-bottom: 180px;
   }
 }

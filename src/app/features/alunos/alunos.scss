@@ -240,6 +240,7 @@ h1 {
   .alunos-content {
     padding-right: 14px;
     padding-left: 14px;
+    padding-bottom: 150px;
   }
 
   .filters {
@@ -254,5 +255,11 @@ h1 {
   .absence-breakdown {
     grid-column: 2 / -1;
     margin: -9px 0 0;
+  }
+}
+
+@media (max-width: 440px) {
+  .alunos-content {
+    padding-bottom: 180px;
   }
 }
