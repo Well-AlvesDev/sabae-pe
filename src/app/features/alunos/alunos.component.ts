@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ';
 
@@ -107,6 +108,35 @@ export class AlunosComponent implements OnInit, OnDestroy {
     this.goToPage(this.currentPage() + 1);
   }
 
+  public openStudentDetails(student: StudentAbsence): void {
+    const row = this.rows.find(candidate =>
+      this.getValue(candidate, 'NOME') === student.name
+      && this.getValue(candidate, 'TURMA') === student.room
+      && this.getValue(candidate, 'MAT', 'MATRICULA', 'MATRÍCULA') === student.registration,
+    );
+
+    if (!row) {
+      return;
+    }
+
+    const month = Number(this.selectedMonth());
+    const days = this.buildAttendanceDays(row, month);
+    this.dialog.open(AlunoAttendanceDialogComponent, {
+      data: {
+        name: student.name,
+        room: student.room,
+        registration: student.registration,
+        monthLabel: this.monthLabel(),
+        days,
+        present: days.filter(day => day.status === 'P').length,
+        unjustified: student.unjustified,
+        justified: student.justified,
+      },
+      maxWidth: 'calc(100vw - 20px)',
+      panelClass: 'student-attendance-dialog-panel',
+    });
+  }
+
   public toggleMenu(): void {
     this.isMenuOpen.update(isOpen => !isOpen);
   }
@@ -184,6 +214,23 @@ export class AlunosComponent implements OnInit, OnDestroy {
       justified,
       total: unjustified + justified,
     };
+  }
+
+  private buildAttendanceDays(row: Record<string, unknown>, month: number): AttendanceDay[] {
+    const year = new Date().getFullYear();
+    const dayCount = new Date(year, month, 0).getDate();
+    const weekdays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+    return Array.from({ length: dayCount }, (_, index) => {
+      const day = index + 1;
+      const value = String(row[String(day)] ?? '').toUpperCase();
+      const match = value.match(new RegExp(`\\b(P|FNJ|FJ):${month}\\b`));
+      return {
+        day,
+        weekday: weekdays[new Date(year, month - 1, day).getDay()],
+        status: (match?.[1] as AttendanceDay['status']) || null,
+      };
+    });
   }
 
   private getValue(row: Record<string, unknown>, ...keys: string[]): string {

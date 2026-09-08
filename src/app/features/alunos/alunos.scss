@@ -116,12 +116,33 @@ h1 {
 }
 
 .student-item {
+  position: relative;
   min-height: 84px;
+  padding-right: 36px;
   border-bottom: 1px solid #e6edf4;
+  cursor: pointer;
+}
+
+.student-item:hover,
+.student-item:focus-visible {
+  background: #f5f9fd;
 }
 
 .student-item:last-child {
   border-bottom: 0;
+}
+
+.student-arrow {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-top: 2px solid #64748b;
+  border-right: 2px solid #64748b;
+  transform: translateY(-50%) rotate(45deg);
+  color: #64748b;
 }
 
 .pagination {
@@ -166,8 +187,13 @@ h1 {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  margin-left: 12px;
-  color: #c2410c;
+  margin-left: 0;
+  color: #c2410c !important;
+}
+
+.absence-total strong,
+.absence-total small {
+  color: inherit !important;
 }
 
 .absence-total strong {
@@ -179,11 +205,11 @@ h1 {
 }
 
 .absence-total.warning {
-  color: #c8ae1a;
+  color: #c8ae1a !important;
 }
 
 .absence-total.danger {
-  color: #dc2626;
+  color: #dc2626 !important;
 }
 
 .absence-breakdown {
@@ -192,6 +218,12 @@ h1 {
   margin-left: 12px;
   color: #64748b;
   font-size: 0.7rem;
+}
+
+.absence-line {
+  display: flex !important;
+  align-items: baseline;
+  gap: 12px;
 }
 
 .absence-breakdown > span {

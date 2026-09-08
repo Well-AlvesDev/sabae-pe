@@ -121,20 +121,24 @@
         </div>
         <mat-list class="student-list" aria-label="Alunos ordenados por número de faltas">
             @for (student of paginatedStudents(); track student.registration || student.name) {
-            <mat-list-item class="student-item">
+            <mat-list-item class="student-item" role="button" tabindex="0" (click)="openStudentDetails(student)"
+                (keydown.enter)="openStudentDetails(student)"
+                (keydown.space)="$event.preventDefault(); openStudentDetails(student)">
                 <span matListItemTitle>{{ student.name }}</span>
                 <span matListItemLine>{{ student.room }}{{ student.registration ? ' • Matrícula ' + student.registration
                     : '' }}</span>
-                <span class="absence-total" [class.warning]="student.total >= 3 && student.total <= 6"
-                    [class.danger]="student.total > 6" matListItemMeta
-                    [attr.aria-label]="student.total + ' faltas no mês'">
-                    <strong>{{ student.total }}</strong>
-                    <small>faltas</small>
+                <span matListItemLine class="absence-line" aria-label="Resumo de faltas">
+                    <span class="absence-total" [class.warning]="student.total >= 3 && student.total <= 6"
+                        [class.danger]="student.total > 6" [attr.aria-label]="student.total + ' faltas no mês'">
+                        <strong>{{ student.total }}</strong>
+                        <small>faltas</small>
+                    </span>
+                    <span class="absence-breakdown" aria-label="Detalhamento das faltas">
+                        <span class="unjustified">{{ student.unjustified }} FNJ</span>
+                        <span class="justified">{{ student.justified }} FJ</span>
+                    </span>
                 </span>
-                <span class="absence-breakdown" aria-label="Detalhamento das faltas">
-                    <span class="unjustified">{{ student.unjustified }} FNJ</span>
-                    <span class="justified">{{ student.justified }} FJ</span>
-                </span>
+                <span matListItemMeta class="student-arrow" aria-hidden="true"></span>
             </mat-list-item>
             }
         </mat-list>
