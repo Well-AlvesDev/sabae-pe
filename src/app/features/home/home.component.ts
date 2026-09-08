@@ -57,6 +57,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   private authSub2: any;
   private loadingStart = Date.now();
   private _logoutDialogOpen = false;
+  private readonly logoutDialogComponentPromise = import('./logout-confirm.dialog')
+    .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog) {}
 
@@ -243,7 +245,21 @@ export class HomeComponent implements OnInit, OnDestroy {
           fjPct,
         };
       })
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      .sort((a, b) => {
+        if (b.presentPct !== a.presentPct) {
+          return b.presentPct - a.presentPct;
+        }
+
+        if (a.fnjPct !== b.fnjPct) {
+          return a.fnjPct - b.fnjPct;
+        }
+
+        if (a.fjPct !== b.fjPct) {
+          return a.fjPct - b.fjPct;
+        }
+
+        return a.name.localeCompare(b.name, 'pt-BR');
+      });
   }
 
   private getTurmaValue(row: Record<string, unknown>): string {
@@ -438,7 +454,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     this._logoutDialogOpen = true;
     try {
-      const { LogoutConfirmDialogComponent } = await import('./logout-confirm.dialog');
+      const LogoutConfirmDialogComponent = await this.logoutDialogComponentPromise;
       const ref = this.dialog.open(LogoutConfirmDialogComponent, {
         disableClose: true,
         hasBackdrop: true,

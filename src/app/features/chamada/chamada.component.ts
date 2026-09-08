@@ -82,6 +82,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   private authSub1: any;
   private authSub2: any;
   private _logoutDialogOpen = false;
+  private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
+    .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
   private useSessionStorageForTbdaCache = false;
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
@@ -500,7 +502,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
 
     this._logoutDialogOpen = true;
     try {
-      const { LogoutConfirmDialogComponent } = await import('../home/logout-confirm.dialog');
+      const LogoutConfirmDialogComponent = await this.logoutDialogComponentPromise;
       const ref = this.dialog.open(LogoutConfirmDialogComponent, {
         disableClose: true,
         hasBackdrop: true,

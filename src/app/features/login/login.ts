@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { CommonModule, NgIf } from '@angular/common';
+import { CommonModule, NgIf, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
   imports: [
     CommonModule,
     NgIf,
+    NgOptimizedImage,
     FormsModule,
     MatButtonModule,
     MatCardModule,

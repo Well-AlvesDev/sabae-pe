@@ -20,7 +20,7 @@
   font-weight: 600;
 }
 
-.relatorios-content {
+.planilhas-content {
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -31,13 +31,13 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.relatorios-panel {
+.planilhas-panel {
   width: min(560px, 100%);
   min-width: 0;
   padding: 0 0 24px;
 }
 
-.relatorios-panel h1 {
+.planilhas-panel h1 {
   margin: 0 0 42px;
   color: #263746;
   font-size: 2rem;
@@ -183,12 +183,12 @@
 }
 
 @media (max-width: 560px) {
-  .relatorios-content {
+  .planilhas-content {
     padding-right: 16px;
     padding-left: 16px;
   }
 
-  .relatorios-panel h1 {
+  .planilhas-panel h1 {
     margin-bottom: 34px;
     font-size: 1.8rem;
   }

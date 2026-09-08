@@ -20,14 +20,14 @@ import {
 type ReportRow = Record<string, string>;
 
 @Component({
-  selector: 'app-relatorios',
+  selector: 'app-planilhas',
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule, RouterLink],
-  templateUrl: './relatorios.html',
-  styleUrls: ['./relatorios.scss'],
+  templateUrl: './planilhas.html',
+  styleUrls: ['./planilhas.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RelatoriosComponent implements OnInit, OnDestroy {
+export class PlanilhasComponent implements OnInit, OnDestroy {
   public readonly months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
@@ -49,6 +49,8 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
   private authSub1: any;
   private authSub2: any;
   private _logoutDialogOpen = false;
+  private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
+    .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
@@ -75,7 +77,7 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
       this.tbdaRows = rows;
       this.rooms = getTbdaClassrooms(rows);
     } catch (error) {
-      console.error('[relatorios] failed to load report data', error);
+      console.error('[planilhas] failed to load spreadsheet data', error);
     } finally {
       this.isLoadingProfile = false;
       this.isLoadingAttendanceData = false;
@@ -125,7 +127,7 @@ export class RelatoriosComponent implements OnInit, OnDestroy {
 
     this._logoutDialogOpen = true;
     try {
-      const { LogoutConfirmDialogComponent } = await import('../home/logout-confirm.dialog');
+      const LogoutConfirmDialogComponent = await this.logoutDialogComponentPromise;
       const ref = this.dialog.open(LogoutConfirmDialogComponent, {
         disableClose: true,
         hasBackdrop: true,

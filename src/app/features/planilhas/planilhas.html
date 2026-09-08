@@ -54,9 +54,9 @@
     </div>
 </nav>
 
-<main class="relatorios-content">
-    <section class="relatorios-panel" aria-labelledby="relatorios-title">
-        <h1 id="relatorios-title">Gerar planilha</h1>
+<main class="planilhas-content">
+    <section class="planilhas-panel" aria-labelledby="planilhas-title">
+        <h1 id="planilhas-title">Gerar planilha</h1>
 
         <div class="field-group">
             <mat-form-field class="material-select" appearance="outline">
@@ -93,7 +93,10 @@
                 rows="5"
                 aria-label="Insira ou cole as matrículas na ordem desejada (isso irá ditar a ordem dos alunos na planilha gerada)."></textarea>
             <button class="clear-registrations-button" type="button" (click)="clearRegistrations()"
-                [disabled]="!registrations">Limpar</button>
+                [disabled]="!registrations">
+                <i class="ri-eraser-line" aria-hidden="true"></i>
+                <span>Limpar</span>
+            </button>
         </div>
 
         <button class="primary-button" type="button" [disabled]="!canGenerateReport" (click)="generateReport()"
@@ -111,8 +114,8 @@
     <a routerLink="/chamada" class="nav-item" aria-label="Chamada">
         <span class="material-icons">assignment</span><span class="label">Chamada</span>
     </a>
-    <a routerLink="/relatorios" class="nav-item active" aria-label="Relatórios">
-        <span class="material-icons">bar_chart</span><span class="label">Relatórios</span>
+    <a routerLink="/planilhas" class="nav-item active" aria-label="Planilhas">
+        <span class="material-icons">bar_chart</span><span class="label">Planilhas</span>
     </a>
     <a class="nav-item" href="#" aria-label="Alunos">
         <span class="material-icons">people</span><span class="label">Alunos</span>

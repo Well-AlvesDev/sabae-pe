@@ -20,8 +20,8 @@ export const routes: Routes = [
     data: { reuse: true },
   },
   {
-    path: 'relatorios',
-    loadComponent: () => import('./features/relatorios/relatorios.component').then(m => m.RelatoriosComponent),
+    path: 'planilhas',
+    loadComponent: () => import('./features/planilhas/planilhas.component').then(m => m.PlanilhasComponent),
     canActivate: [authGuard],
     data: { reuse: true },
   },
