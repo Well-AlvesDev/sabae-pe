@@ -13,6 +13,8 @@
  * Para um botao da planilha, atribua a funcao sincronizarChamadasSupabase
  * informando o mes desejado.
  */
+var HEADER_ROW = 13;
+
 function sincronizarChamadasSupabase(monthValue) {
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -48,13 +50,13 @@ function sincronizarChamadasSupabase(monthValue) {
 
     var oldLastRow = sheet.getLastRow();
     var oldLastColumn = sheet.getLastColumn();
-    if (oldLastRow > 0 && oldLastColumn > 0) {
-      sheet.getRange(1, 1, oldLastRow, oldLastColumn).clearContent();
+    if (oldLastRow >= HEADER_ROW && oldLastColumn > 0) {
+      sheet.getRange(HEADER_ROW, 1, oldLastRow - HEADER_ROW + 1, oldLastColumn).clearContent();
     }
 
-    sheet.getRange(1, 1, values.length, columns.length).setValues(values);
-    sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
+    sheet.getRange(HEADER_ROW, 1, values.length, columns.length).setValues(values);
+    sheet.setFrozenRows(HEADER_ROW);
+    sheet.getRange(HEADER_ROW, 1, 1, columns.length).setFontWeight('bold');
     SpreadsheetApp.flush();
 
     return 'Sincronizacao concluida: ' + rows.length + ' registro(s).';
@@ -122,8 +124,11 @@ function sincronizarChamadasSelecionadas_(calls) {
       throw new Error('A aba do mes ' + group.month.label + ' (' + group.month.sheetName + ') nao foi encontrada.');
     }
 
-    var sheetData = sheet.getDataRange().getDisplayValues();
-    var headers = sheetData.length ? sheetData[0] : [];
+    var lastColumn = sheet.getLastColumn();
+    var lastRow = sheet.getLastRow();
+    var headers = lastColumn > 0
+      ? sheet.getRange(HEADER_ROW, 1, 1, lastColumn).getDisplayValues()[0]
+      : [];
     var matColumn = findHeaderIndex_(headers, 'MAT');
     var roomColumn = findHeaderIndex_(headers, 'TURMA');
     var days = Object.keys(group.days);
@@ -147,7 +152,11 @@ function sincronizarChamadasSelecionadas_(calls) {
       rowsByKey[key] = row;
     });
 
-    var values = sheetData.slice(1).map(function(row) {
+    var dataRowCount = Math.max(0, lastRow - HEADER_ROW);
+    var sheetData = dataRowCount
+      ? sheet.getRange(HEADER_ROW + 1, 1, dataRowCount, lastColumn).getDisplayValues()
+      : [];
+    var values = sheetData.map(function(row) {
       var key = String(row[roomColumn] || '').trim() + '\u0000' + String(row[matColumn] || '').trim();
       var sourceRow = rowsByKey[key];
       if (sourceRow) {
@@ -160,7 +169,7 @@ function sincronizarChamadasSelecionadas_(calls) {
     });
 
     if (values.length) {
-      sheet.getRange(2, firstDayColumn + 1, values.length, lastDayColumn - firstDayColumn + 1)
+      sheet.getRange(HEADER_ROW + 1, firstDayColumn + 1, values.length, lastDayColumn - firstDayColumn + 1)
         .setValues(values.map(function(row) {
           return row.slice(firstDayColumn, lastDayColumn + 1);
         }));
@@ -290,8 +299,11 @@ function getStatusForMonth_(value, monthNumber) {
 }
 
 function getSheetMatriculas_(sheet) {
-  var values = sheet.getDataRange().getDisplayValues();
-  var headers = values.length ? values[0] : [];
+  var lastColumn = sheet.getLastColumn();
+  var lastRow = sheet.getLastRow();
+  var headers = lastColumn > 0
+    ? sheet.getRange(HEADER_ROW, 1, 1, lastColumn).getDisplayValues()[0]
+    : [];
   var matColumn = headers.findIndex(function(header) {
     return String(header).trim().toUpperCase() === 'MAT';
   });
@@ -301,7 +313,11 @@ function getSheetMatriculas_(sheet) {
   }
 
   var matriculas = {};
-  values.slice(1).forEach(function(row) {
+  var dataRowCount = Math.max(0, lastRow - HEADER_ROW);
+  var values = dataRowCount
+    ? sheet.getRange(HEADER_ROW + 1, 1, dataRowCount, lastColumn).getDisplayValues()
+    : [];
+  values.forEach(function(row) {
     var matricula = String(row[matColumn] || '').trim();
     if (matricula) {
       matriculas[matricula] = true;

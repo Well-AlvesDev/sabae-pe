@@ -1,3 +1,9 @@
+<div class="data-loading-overlay" *ngIf="isLoadingAttendanceData" role="status" aria-live="polite"
+    aria-label="Obtendo informações">
+    <mat-progress-spinner diameter="56" strokeWidth="4" mode="indeterminate" aria-hidden="true"></mat-progress-spinner>
+    <span>Obtendo informações...</span>
+</div>
+
 <header class="top-app-bar" role="banner" aria-label="Barra superior">
     <div class="leading">
         <button class="icon-button menu-button" aria-label="Abrir menu" type="button" (click)="toggleMenu()">
@@ -49,20 +55,52 @@
 </nav>
 
 <main class="relatorios-content">
-    <section class="relatorios-panel" aria-label="Ações de relatórios">
-        <label class="month-field" for="report-month">
-            <span>Mês do relatório</span>
-            <select id="report-month" [value]="selectedMonth" (change)="onMonthChange($event)">
-                <option value="" disabled>Selecione o mês</option>
-                <option *ngFor="let month of reportMonths" [value]="month.value">{{ month.label }}</option>
-            </select>
-        </label>
-        <button class="primary-button" type="button" (click)="enviar()" [disabled]="isSyncingReport || !selectedMonth">
-            <mat-progress-spinner *ngIf="isSyncingReport" diameter="20" strokeWidth="3" mode="indeterminate"
-                aria-hidden="true"></mat-progress-spinner>
-            <span>{{ isSyncingReport ? 'atualizando...' : 'enviar' }}</span>
+    <section class="relatorios-panel" aria-labelledby="relatorios-title">
+        <h1 id="relatorios-title">Gerar planilha</h1>
+
+        <div class="field-group">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Selecione o mês</mat-label>
+                <mat-select [(ngModel)]="selectedMonth" aria-label="Selecione o mês">
+                    <mat-option *ngFor="let month of months" [value]="month">{{ month }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        <div class="field-group">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Selecione o turno</mat-label>
+                <mat-select [(ngModel)]="selectedShift" aria-label="Selecione o turno">
+                    <mat-option *ngFor="let shift of shifts" [value]="shift">{{ shift }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        <div class="field-group">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Selecione a turma (opcional)</mat-label>
+                <mat-select [(ngModel)]="selectedRoom" aria-label="Selecione a turma (opcional)">
+                    <mat-option *ngFor="let room of rooms" [value]="room">{{ room }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        <div class="field-group registrations-group">
+            <label class="registrations-label" for="registrations">Ordem de matrículas (Opcional)</label>
+            <p class="registrations-hint">Deixe vazio para usar ordenação padrão do sistema (por sala e nome)</p>
+            <textarea id="registrations" class="registrations-input" [(ngModel)]="registrations"
+                placeholder="Insira ou cole as matrículas na ordem desejada (isso irá ditar a ordem dos alunos na planilha gerada)."
+                rows="5"
+                aria-label="Insira ou cole as matrículas na ordem desejada (isso irá ditar a ordem dos alunos na planilha gerada)."></textarea>
+            <button class="clear-registrations-button" type="button" (click)="clearRegistrations()"
+                [disabled]="!registrations">Limpar</button>
+        </div>
+
+        <button class="primary-button" type="button" [disabled]="!canGenerateReport" (click)="generateReport()"
+            [attr.aria-busy]="isGeneratingReport">
+            <span class="material-icons" aria-hidden="true">table_view</span>
+            <span>{{ isGeneratingReport ? 'Gerando planilha...' : 'Gerar planilha' }}</span>
         </button>
-        <p class="report-status" aria-live="polite" *ngIf="reportStatus">{{ reportStatus }}</p>
     </section>
 </main>
 
