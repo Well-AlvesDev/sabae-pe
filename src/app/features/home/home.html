@@ -182,6 +182,110 @@
       </div>
     </section>
 
+    <section class="overview-card monthly-attendance-card" aria-label="Presença por mês">
+      <div class="card-title">
+        <span class="material-icons">show_chart</span>
+        <strong>Presença por mês</strong>
+      </div>
+      <div class="monthly-chart-legend" aria-label="Legenda do gráfico">
+        <span class="monthly-legend-item">
+          <span class="monthly-legend-square trend-up" aria-hidden="true"></span>
+          <span>Aumento</span>
+        </span>
+        <span class="monthly-legend-item">
+          <span class="monthly-legend-square trend-down" aria-hidden="true"></span>
+          <span>Queda</span>
+        </span>
+        <span class="monthly-legend-item">
+          <span class="monthly-legend-square trend-same" aria-hidden="true"></span>
+          <span>Sem alteração</span>
+        </span>
+      </div>
+      <p class="monthly-chart-hint">
+        Clique em uma linha ou ponto do gráfico para visualizar os detalhes do mês.
+      </p>
+      <div class="monthly-classroom-filter">
+        <label for="monthly-classroom-select">Turma do gráfico</label>
+        <select id="monthly-classroom-select" [value]="selectedMonthlyClassroom"
+          (change)="setMonthlyClassroomFilter($any($event.target).value)">
+          <option value="all">Todas</option>
+          <option *ngFor="let classroom of monthlyClassroomOptions" [value]="classroom">{{ classroom }}</option>
+        </select>
+      </div>
+      <div class="monthly-chart-wrapper" *ngIf="!isLoadingAttendanceScore; else monthlyChartLoading">
+        <svg class="monthly-line-chart" viewBox="0 0 620 235" role="img"
+          [attr.aria-label]="'Percentual de presença de janeiro até ' + (monthlyAttendanceSummary.at(-1)?.label || 'o mês atual')">
+          <line class="chart-grid-line" x1="42" y1="33" x2="580" y2="33"></line>
+          <line class="chart-grid-line" x1="42" y1="105.5" x2="580" y2="105.5"></line>
+          <line class="chart-grid-line" x1="42" y1="178" x2="580" y2="178"></line>
+          <text class="chart-axis-label" x="8" y="37">100%</text>
+          <text class="chart-axis-label" x="20" y="109">50%</text>
+          <text class="chart-axis-label" x="28" y="182">0%</text>
+          <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
+            <line *ngIf="i > 0" class="monthly-line" [class.trend-up]="getMonthlyTrend(i) === 'up'"
+              [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
+              [class.monthly-chart-active]="selectedMonthlyIndex === i" (mouseenter)="showMonthlyDetails(i)"
+              (focus)="showMonthlyDetails(i)" (click)="showMonthlyDetails(i)" tabindex="0" role="button"
+              [attr.aria-label]="'Detalhes da variação até ' + item.label" [attr.x1]="getMonthlyChartX(i - 1)"
+              [attr.y1]="getMonthlyChartY(monthlyAttendanceSummary[i - 1].presentPct)" [attr.x2]="getMonthlyChartX(i)"
+              [attr.y2]="getMonthlyChartY(item.presentPct)"></line>
+            <circle class="monthly-point" [class.trend-up]="getMonthlyTrend(i) === 'up'"
+              [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
+              [class.monthly-chart-active]="selectedMonthlyIndex === i" (mouseenter)="showMonthlyDetails(i)"
+              (focus)="showMonthlyDetails(i)" (click)="showMonthlyDetails(i)" tabindex="0"
+              [attr.cx]="getMonthlyChartX(i)" [attr.cy]="getMonthlyChartY(item.presentPct)" r="4"
+              [attr.aria-label]="item.label + ': ' + item.presentPct + '% de presença'">
+              <title>{{ item.label }}: {{ item.presentPct }}% de presença</title>
+            </circle>
+            <text class="chart-month-label" [attr.x]="getMonthlyChartX(i)" y="211" text-anchor="middle">{{ item.label
+              }}</text>
+          </ng-container>
+        </svg>
+      </div>
+      <section class="monthly-details-panel" *ngIf="selectedMonthlyIndex !== null" aria-live="polite"
+        aria-label="Detalhes do mês selecionado">
+        <div class="monthly-details-heading">
+          <span class="material-icons" aria-hidden="true">calendar_month</span>
+          <strong>{{ getMonthlyFullLabel(selectedMonthlyIndex) }}</strong>
+          <button type="button" class="monthly-details-close" aria-label="Fechar detalhes"
+            (click)="clearMonthlyDetails()">
+            <span class="material-icons" aria-hidden="true">close</span>
+          </button>
+        </div>
+        <div class="monthly-details-grid">
+          <div class="monthly-detail-item">
+            <span class="material-icons" aria-hidden="true">fact_check</span>
+            <div class="monthly-detail-content">
+              <span>Registros</span>
+              <strong>{{ monthlyAttendanceSummary[selectedMonthlyIndex].total }}</strong>
+            </div>
+          </div>
+          <div class="monthly-detail-item">
+            <span class="material-icons" aria-hidden="true">percent</span>
+            <div class="monthly-detail-content">
+              <span>Presença</span>
+              <strong class="attendance-value">{{ monthlyAttendanceSummary[selectedMonthlyIndex].presentPct }}%</strong>
+            </div>
+          </div>
+          <div class="monthly-detail-item">
+            <span class="material-icons" aria-hidden="true">trending_{{ getMonthlyTrend(selectedMonthlyIndex) === 'up' ?
+              'up' : getMonthlyTrend(selectedMonthlyIndex) === 'down' ? 'down' : 'flat' }}</span>
+            <div class="monthly-detail-content">
+              <span>Variação</span>
+              <strong [class.trend-up]="getMonthlyTrend(selectedMonthlyIndex) === 'up'"
+                [class.trend-down]="getMonthlyTrend(selectedMonthlyIndex) === 'down'"
+                [class.trend-same]="getMonthlyTrend(selectedMonthlyIndex) === 'same'">
+                {{ getMonthlyVariationLabel(selectedMonthlyIndex) }}
+              </strong>
+            </div>
+          </div>
+        </div>
+      </section>
+      <ng-template #monthlyChartLoading>
+        <div class="monthly-chart-loading" aria-label="Carregando presença por mês">Calculando...</div>
+      </ng-template>
+    </section>
+
     <section class="overview-card classroom-card" aria-label="Situação da frequência por turma">
       <div class="overview-body classroom-body">
         <div class="card-title">

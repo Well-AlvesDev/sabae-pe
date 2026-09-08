@@ -54,6 +54,32 @@ describe('HomeComponent performance status', () => {
     ]);
   });
 
+  it('should build monthly presence only through the current month', () => {
+    const result = component['buildMonthlyAttendanceSummary']([
+      { 1: 'P:1,FNJ:2', 2: 'P:2', 3: 'P:5', 4: 'FJ:6' },
+    ], 3);
+
+    expect(result).toEqual([
+      { month: 1, label: 'Jan', presentPct: 100, total: 1 },
+      { month: 2, label: 'Fev', presentPct: 50, total: 2 },
+      { month: 3, label: 'Mar', presentPct: 0, total: 0 },
+    ]);
+  });
+
+  it('should classify monthly chart trends', () => {
+    component.monthlyAttendanceSummary = [
+      { month: 1, label: 'Jan', presentPct: 70, total: 10 },
+      { month: 2, label: 'Fev', presentPct: 80, total: 10 },
+      { month: 3, label: 'Mar', presentPct: 80, total: 10 },
+      { month: 4, label: 'Abr', presentPct: 60, total: 10 },
+    ];
+
+    expect(component.getMonthlyTrend(0)).toBe('same');
+    expect(component.getMonthlyTrend(1)).toBe('up');
+    expect(component.getMonthlyTrend(2)).toBe('same');
+    expect(component.getMonthlyTrend(3)).toBe('down');
+  });
+
   it('should persist each attendance register in its own cache row', () => {
     localStorage.clear();
 

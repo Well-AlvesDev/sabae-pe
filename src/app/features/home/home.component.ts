@@ -42,6 +42,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     fnjPct: 0,
     fjPct: 0,
   };
+  public monthlyAttendanceSummary: Array<{ month: number; label: string; presentPct: number; total: number }> = [];
+  public monthlyClassroomOptions: string[] = [];
+  public selectedMonthlyClassroom = 'all';
+  public selectedMonthlyIndex: number | null = null;
+  private readonly monthLabels = [
+    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
+  ];
+  private readonly fullMonthLabels = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ];
   public classroomSummary: Array<{
     name: string;
     total: number;
@@ -56,6 +68,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private authSub1: any;
   private authSub2: any;
   private loadingStart = Date.now();
+  private attendanceRows: Record<string, unknown>[] = [];
   private _logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('./logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
@@ -174,8 +187,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   private computeAttendanceScore(rows: Record<string, unknown>[]): number {
+    this.attendanceRows = rows;
     const counts = this.extractAttendanceCounts(rows);
     this.updateAttendanceSummary(counts);
+    this.monthlyClassroomOptions = this.buildMonthlyClassroomOptions(rows);
+    if (this.selectedMonthlyClassroom !== 'all' && !this.monthlyClassroomOptions.includes(this.selectedMonthlyClassroom)) {
+      this.selectedMonthlyClassroom = 'all';
+    }
+    this.monthlyAttendanceSummary = this.buildMonthlyAttendanceSummary(rows, new Date().getMonth() + 1, this.selectedMonthlyClassroom);
     this.classroomSummary = this.buildClassroomSummary(rows);
 
     const totalForScore = counts.present + counts.fnj;
@@ -185,6 +204,128 @@ export class HomeComponent implements OnInit, OnDestroy {
 
    const score = (counts.present / totalForScore) * 10;
     return Math.floor(score * 100) / 100;
+  }
+
+  private buildMonthlyAttendanceSummary(
+    rows: Record<string, unknown>[],
+    currentMonth = new Date().getMonth() + 1,
+    classroom = 'all',
+  ): Array<{ month: number; label: string; presentPct: number; total: number }> {
+    const countsByMonth = Array.from({ length: currentMonth }, (_, index) => ({
+      month: index + 1,
+      present: 0,
+      total: 0,
+    }));
+
+    for (const row of rows) {
+      if (classroom !== 'all' && this.getTurmaValue(row) !== classroom) {
+        continue;
+      }
+
+      const valuesToCheck: unknown[] = [];
+
+      for (const column of this.tbdaColumns) {
+        if (Object.prototype.hasOwnProperty.call(row, column)) {
+          valuesToCheck.push(row[column]);
+        }
+      }
+
+      if (!valuesToCheck.length) {
+        valuesToCheck.push(...Object.values(row).slice(0, this.tbdaColumns.length));
+      }
+
+      for (const value of valuesToCheck) {
+        for (const match of String(value ?? '').toUpperCase().matchAll(/\b(P|FNJ|FJ):(\d{1,2})\b/g)) {
+          const month = Number(match[2]);
+          const monthCounts = countsByMonth[month - 1];
+          if (!monthCounts) {
+            continue;
+          }
+
+          monthCounts.total += 1;
+          if (match[1] === 'P') {
+            monthCounts.present += 1;
+          }
+        }
+      }
+    }
+
+    return countsByMonth.map(({ month, present, total }) => ({
+      month,
+      label: this.monthLabels[month - 1],
+      presentPct: total ? Math.round((present / total) * 100) : 0,
+      total,
+    }));
+  }
+
+  private buildMonthlyClassroomOptions(rows: Record<string, unknown>[]): string[] {
+    return Array.from(new Set(rows.map(row => this.getTurmaValue(row))))
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  public setMonthlyClassroomFilter(classroom: string): void {
+    this.selectedMonthlyClassroom = classroom || 'all';
+    this.monthlyAttendanceSummary = this.buildMonthlyAttendanceSummary(
+      this.attendanceRows,
+      new Date().getMonth() + 1,
+      this.selectedMonthlyClassroom,
+    );
+    this.selectedMonthlyIndex = null;
+  }
+
+  public getMonthlyChartX(index: number): number {
+    const chartWidth = 538;
+    const chartStart = 42;
+    const lastIndex = this.monthlyAttendanceSummary.length - 1;
+    return lastIndex > 0 ? chartStart + (index / lastIndex) * chartWidth : chartStart + chartWidth / 2;
+  }
+
+  public getMonthlyChartY(presentPct: number): number {
+    return 178 - (presentPct / 100) * 145;
+  }
+
+  public getMonthlyTrend(index: number): 'up' | 'down' | 'same' {
+    if (index <= 0) {
+      return 'same';
+    }
+
+    const current = this.monthlyAttendanceSummary[index]?.presentPct ?? 0;
+    const previous = this.monthlyAttendanceSummary[index - 1]?.presentPct ?? 0;
+    if (current > previous) {
+      return 'up';
+    }
+
+    return current < previous ? 'down' : 'same';
+  }
+
+  public showMonthlyDetails(index: number): void {
+    this.selectedMonthlyIndex = index;
+  }
+
+  public clearMonthlyDetails(): void {
+    this.selectedMonthlyIndex = null;
+  }
+
+  public getMonthlyVariation(index: number): number | null {
+    if (index <= 0) {
+      return null;
+    }
+
+    return (this.monthlyAttendanceSummary[index]?.presentPct ?? 0)
+      - (this.monthlyAttendanceSummary[index - 1]?.presentPct ?? 0);
+  }
+
+  public getMonthlyVariationLabel(index: number): string {
+    const variation = this.getMonthlyVariation(index);
+    if (variation === null) {
+      return 'Sem comparação';
+    }
+
+    return `${variation > 0 ? '+' : ''}${variation}%`;
+  }
+
+  public getMonthlyFullLabel(index: number): string {
+    return this.fullMonthLabels[this.monthlyAttendanceSummary[index]?.month - 1] ?? 'Mês';
   }
 
   private buildClassroomSummary(rows: Record<string, unknown>[]) {
