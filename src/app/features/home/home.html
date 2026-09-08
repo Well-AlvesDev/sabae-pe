@@ -129,6 +129,19 @@
             <span class="material-icons">analytics</span>
             <strong>Resumo de Frequência</strong>
           </div>
+          <div class="summary-month-filter">
+            <mat-form-field class="material-select summary-month-select" appearance="outline">
+              <mat-label>Período do resumo</mat-label>
+              <mat-select id="summary-month-select" panelClass="compact-select-panel" [value]="selectedSummaryMonth"
+                (selectionChange)="setSummaryMonthFilter($event.value)"
+                aria-label="Filtrar resumo de frequência por mês">
+                <mat-option value="all">Todo período</mat-option>
+                <mat-option *ngFor="let month of classroomMonthOptions" [value]="month.value">
+                  {{ month.label }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
           <div class="summary-items">
             <div class="summary-item">
               <span class="summary-label">Total registrado</span>

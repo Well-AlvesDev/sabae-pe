@@ -147,7 +147,9 @@ dashboard-shell mat-card {
   margin: 8px 0 2px;
 }
 
-.monthly-classroom-select {
+.monthly-classroom-select,
+.classroom-month-select,
+.summary-month-select {
   display: block;
   width: 100%;
   margin-top: 0;
@@ -160,19 +162,15 @@ dashboard-shell mat-card {
   margin: 0 0 2px;
 }
 
-.classroom-month-select {
-  display: block;
-  width: 100%;
-  margin-top: 0;
-  --mat-form-field-container-height: 48px;
-  --mat-form-field-container-vertical-padding: 10px;
-}
-
-:host ::ng-deep .classroom-month-select .mat-mdc-form-field-subscript-wrapper {
+:host ::ng-deep .monthly-classroom-select .mat-mdc-form-field-subscript-wrapper,
+:host ::ng-deep .classroom-month-select .mat-mdc-form-field-subscript-wrapper,
+:host ::ng-deep .summary-month-select .mat-mdc-form-field-subscript-wrapper {
   display: none;
 }
 
-:host ::ng-deep .classroom-month-select .mat-mdc-text-field-wrapper {
+:host ::ng-deep .monthly-classroom-select .mat-mdc-text-field-wrapper,
+:host ::ng-deep .classroom-month-select .mat-mdc-text-field-wrapper,
+:host ::ng-deep .summary-month-select .mat-mdc-text-field-wrapper {
   min-height: 48px;
   height: 48px;
   border-radius: 8px;
@@ -180,41 +178,18 @@ dashboard-shell mat-card {
   box-shadow: 0 2px 6px rgba(21, 34, 48, 0.12);
 }
 
-:host ::ng-deep .classroom-month-select .mat-mdc-form-field-flex {
-  min-height: 48px;
-}
-
-:host ::ng-deep .classroom-month-select .mat-mdc-select-value,
-:host ::ng-deep .classroom-month-select .mat-mdc-select-placeholder {
-  overflow: hidden;
-  color: #263746;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-:host ::ng-deep .classroom-month-select .mat-mdc-select-arrow {
-  color: #3478c8;
-}
-
-:host ::ng-deep .monthly-classroom-select .mat-mdc-form-field-subscript-wrapper {
-  display: none;
-}
-
-:host ::ng-deep .monthly-classroom-select .mat-mdc-text-field-wrapper {
-  min-height: 48px;
-  height: 48px;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(21, 34, 48, 0.12);
-}
-
-:host ::ng-deep .monthly-classroom-select .mat-mdc-form-field-flex {
+:host ::ng-deep .monthly-classroom-select .mat-mdc-form-field-flex,
+:host ::ng-deep .classroom-month-select .mat-mdc-form-field-flex,
+:host ::ng-deep .summary-month-select .mat-mdc-form-field-flex {
   min-height: 48px;
 }
 
 :host ::ng-deep .monthly-classroom-select .mat-mdc-select-value,
-:host ::ng-deep .monthly-classroom-select .mat-mdc-select-placeholder {
+:host ::ng-deep .monthly-classroom-select .mat-mdc-select-placeholder,
+:host ::ng-deep .classroom-month-select .mat-mdc-select-value,
+:host ::ng-deep .classroom-month-select .mat-mdc-select-placeholder,
+:host ::ng-deep .summary-month-select .mat-mdc-select-value,
+:host ::ng-deep .summary-month-select .mat-mdc-select-placeholder {
   overflow: hidden;
   color: #263746;
   font-size: 12px;
@@ -222,7 +197,9 @@ dashboard-shell mat-card {
   white-space: nowrap;
 }
 
-:host ::ng-deep .monthly-classroom-select .mat-mdc-select-arrow {
+:host ::ng-deep .monthly-classroom-select .mat-mdc-select-arrow,
+:host ::ng-deep .classroom-month-select .mat-mdc-select-arrow,
+:host ::ng-deep .summary-month-select .mat-mdc-select-arrow {
   color: #3478c8;
 }
 
@@ -419,6 +396,11 @@ dashboard-shell mat-card {
   align-items: stretch;
   justify-content: flex-start;
   gap: 18px;
+}
+
+.summary-month-filter {
+  width: min(240px, 100%);
+  margin: 0 0 2px;
 }
 
 .summary-items {

@@ -50,6 +50,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public selectedMonthlyIndex: number | null = null;
   public classroomMonthOptions: Array<{ value: string; label: string }> = [];
   public selectedClassroomMonth = String(new Date().getMonth() + 1);
+  public selectedSummaryMonth = String(new Date().getMonth() + 1);
   private readonly monthLabels = [
     'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
     'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
@@ -193,7 +194,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private computeAttendanceScore(rows: Record<string, unknown>[]): number {
     this.attendanceRows = rows;
     const counts = this.extractAttendanceCounts(rows);
-    this.updateAttendanceSummary(counts);
     this.monthlyClassroomOptions = this.buildMonthlyClassroomOptions(rows);
     if (this.selectedMonthlyClassroom !== 'all' && !this.monthlyClassroomOptions.includes(this.selectedMonthlyClassroom)) {
       this.selectedMonthlyClassroom = 'all';
@@ -203,6 +203,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.selectedClassroomMonth !== 'all' && !this.classroomMonthOptions.some(option => option.value === this.selectedClassroomMonth)) {
       this.selectedClassroomMonth = 'all';
     }
+    if (this.selectedSummaryMonth !== 'all' && !this.classroomMonthOptions.some(option => option.value === this.selectedSummaryMonth)) {
+      this.selectedSummaryMonth = String(new Date().getMonth() + 1);
+    }
+    this.updateAttendanceSummary(this.extractAttendanceCounts(rows, this.selectedSummaryMonth));
     this.classroomSummary = this.buildClassroomSummary(rows, this.selectedClassroomMonth);
 
     const totalForScore = counts.present + counts.fnj;
@@ -284,6 +288,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   public setClassroomMonthFilter(month: string): void {
     this.selectedClassroomMonth = month || 'all';
     this.classroomSummary = this.buildClassroomSummary(this.attendanceRows, this.selectedClassroomMonth);
+  }
+
+  public setSummaryMonthFilter(month: string): void {
+    this.selectedSummaryMonth = month || 'all';
+    this.updateAttendanceSummary(this.extractAttendanceCounts(this.attendanceRows, this.selectedSummaryMonth));
   }
 
   private buildClassroomMonthOptions(): Array<{ value: string; label: string }> {
@@ -444,7 +453,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     return normalized || 'Sem turma';
   }
 
-  private extractAttendanceCounts(rows: Record<string, unknown>[]) {
+  private extractAttendanceCounts(rows: Record<string, unknown>[], month = 'all') {
     return rows.reduce(
       (acc: { present: number; fnj: number; fj: number }, row) => {
         const valuesToCheck: unknown[] = [];
@@ -465,7 +474,9 @@ export class HomeComponent implements OnInit, OnDestroy {
             continue;
           }
 
-          const tokens = this.extractStatusTokens(value);
+          const tokens = month === 'all'
+            ? this.extractStatusTokens(value)
+            : this.extractStatusTokensForMonth(value, Number(month));
 
           for (const token of tokens) {
             if (token === 'P') {
