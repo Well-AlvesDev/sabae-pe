@@ -38,17 +38,26 @@
     </div>
   </div>
   <div class="drawer-items">
-    <a class="drawer-item" href="#">
-      <span class="material-icons">settings</span>
-      Configurações
-    </a>
+    <details class="drawer-submenu">
+      <summary class="drawer-item">
+        <span class="material-icons">play_arrow</span>
+        <span>Operar</span>
+        <span class="material-icons drawer-submenu-arrow">expand_more</span>
+      </summary>
+      <div class="drawer-submenu-items">
+        <button class="drawer-submenu-item" type="button"
+          (click)="openStudentOperation('Transferir/Matricular Aluno')">Transferir/Matricular Aluno</button>
+        <button class="drawer-submenu-item" type="button"
+          (click)="openStudentOperation('Alterar Turma do Aluno')">Alterar Turma do Aluno</button>
+        <button class="drawer-submenu-item" type="button"
+          (click)="openStudentOperation('Alterar Nome do Aluno')">Alterar Nome do Aluno</button>
+        <button class="drawer-submenu-item" type="button" (click)="openStudentOperation('Alterar turno')">Alterar
+          turno</button>
+      </div>
+    </details>
     <a class="drawer-item" href="#">
       <span class="material-icons">support_agent</span>
       Suporte
-    </a>
-    <a class="drawer-item" href="#">
-      <span class="material-icons">security</span>
-      Segurança
     </a>
     <button class="drawer-item logout-button" (click)="logout()" type="button">
       <span class="material-icons">exit_to_app</span>

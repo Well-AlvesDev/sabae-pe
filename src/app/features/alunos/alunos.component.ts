@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
+import { StudentOperationDialogComponent, type StudentOperation } from './student-operation.dialog';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ';
 
@@ -143,6 +144,15 @@ export class AlunosComponent implements OnInit, OnDestroy {
 
   public closeMenu(): void {
     this.isMenuOpen.set(false);
+  }
+
+  public openStudentOperation(operation: StudentOperation): void {
+    this.closeMenu();
+    this.dialog.open(StudentOperationDialogComponent, {
+      data: { operation },
+      autoFocus: false,
+      maxWidth: 'calc(100vw - 20px)',
+    });
   }
 
   public async logout(): Promise<void> {

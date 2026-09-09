@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router, RouterLink } from '@angular/router';
 import { AttendanceDeleteConfirmDialogComponent, AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
+import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getAttendanceCache,
@@ -174,6 +175,15 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.router.navigateByUrl('/home');
   }
 
+  public openStudentOperation(operation: StudentOperation): void {
+    this.closeMenu();
+    this.dialog.open(StudentOperationDialogComponent, {
+      data: { operation },
+      autoFocus: false,
+      maxWidth: 'calc(100vw - 20px)',
+    });
+  }
+
   public openAttendanceModal(): void {
     this.isEditingAttendance = false;
     this.editingAttendanceSavedAt = null;
@@ -234,7 +244,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       ? attendance.students.map(student => ({
           name: String(student?.name ?? '').trim(),
           registration: String(student?.registration ?? '').trim(),
-          status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : 'P',
+          status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
         }))
       : this.tbdaRows
           .filter(row => this.getRowText(row, 'TURMA') === this.selectedRoom)

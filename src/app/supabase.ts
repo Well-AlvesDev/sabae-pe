@@ -135,7 +135,7 @@ export async function ensureTbdaCache(useSessionStorage = false): Promise<Record
   return tbdaCacheSyncPromise;
 }
 
-export type AttendanceCacheStatus = 'P' | 'FNJ' | 'FJ';
+export type AttendanceCacheStatus = 'P' | 'FNJ' | 'FJ' | 'Transferido' | 'Matriculado';
 
 export type AttendanceCacheStudent = {
   name: string;
@@ -242,7 +242,7 @@ export function getAttendanceRegistrationPayloadsForEntry(entry: AttendanceCache
   const dayValue = Number.parseInt(String(entry.day ?? '').trim(), 10);
 
   return entry.students
-    .filter(student => student.status && student.registration)
+    .filter(student => (student.status === 'P' || student.status === 'FNJ' || student.status === 'FJ') && student.registration)
     .map(student => ({
       savedAt: Number(entry.savedAt ?? Date.now()),
       dia: Number.isFinite(dayValue) ? dayValue : 0,
@@ -401,7 +401,8 @@ function normalizeAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Attend
     students: Array.isArray(entry.students) ? entry.students.map(student => ({
       name: String(student?.name ?? '').trim(),
       registration: String(student?.registration ?? '').trim(),
-      status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
+      status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+        || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
     })).filter(student => student.name || student.registration) : [],
   };
 }
@@ -482,7 +483,8 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
           students: students.map(student => ({
             name: String(student?.name ?? '').trim(),
             registration: String(student?.registration ?? '').trim(),
-            status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
+            status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+              || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
           })),
         } satisfies AttendanceCacheEntry;
       })
@@ -564,6 +566,100 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
   } catch {
     return null;
   }
+}
+
+export type StudentAdministrativeStatus = 'Transferido' | 'Matriculado';
+
+export async function updateStudentStatus(
+  registration: string,
+  name: string,
+  status: StudentAdministrativeStatus,
+): Promise<void> {
+  const normalizedRegistration = String(registration ?? '').trim();
+  const normalizedName = String(name ?? '').trim();
+  if (!normalizedRegistration && !normalizedName) {
+    throw new Error('Aluno sem matrícula ou nome para atualização.');
+  }
+
+  let query = supabase.from(TBDA_TABLE_NAME).update({ STATUS: status });
+  const result = normalizedRegistration
+    ? await query.eq('MAT', normalizedRegistration)
+    : await query.eq('NOME', normalizedName);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const tbdaRows = getTbdaCache();
+  if (tbdaRows) {
+    const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
+    matchingRows.forEach(row => { row['STATUS'] = status; });
+    if (matchingRows.length) {
+      saveTbdaCache(tbdaRows);
+    }
+  }
+
+  const attendanceEntries = getAttendanceCache();
+  const updatedEntries = attendanceEntries.map(entry => ({
+    ...entry,
+    students: entry.students.map(student =>
+      matchesStudent(student, normalizedRegistration, normalizedName)
+        ? { ...student, status }
+        : student,
+    ),
+  }));
+  try {
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+  } catch {}
+}
+
+export async function updateStudentClassroom(
+  registration: string,
+  name: string,
+  classroom: string,
+): Promise<void> {
+  const normalizedRegistration = String(registration ?? '').trim();
+  const normalizedName = String(name ?? '').trim();
+  const normalizedClassroom = String(classroom ?? '').trim();
+  if ((!normalizedRegistration && !normalizedName) || !normalizedClassroom) {
+    throw new Error('Dados insuficientes para atualizar a turma.');
+  }
+
+  let query = supabase.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom });
+  const result = normalizedRegistration
+    ? await query.eq('MAT', normalizedRegistration)
+    : await query.eq('NOME', normalizedName);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const tbdaRows = getTbdaCache();
+  if (tbdaRows) {
+    const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
+    matchingRows.forEach(row => { row['TURMA'] = normalizedClassroom; });
+    if (matchingRows.length) {
+      saveTbdaCache(tbdaRows);
+    }
+  }
+}
+
+function matchesStudent(row: Record<string, unknown>, registration: string, name: string): boolean {
+  const rowRegistration = String(row['MAT'] ?? row['MATRICULA'] ?? row['MATRÍCULA'] ?? row['registration'] ?? '').trim();
+  const rowName = String(row['NOME'] ?? row['name'] ?? '').trim();
+  return (Boolean(registration) && rowRegistration === registration)
+    || (!registration && Boolean(name) && rowName === name);
+}
+
+function saveTbdaCache(rows: Record<string, unknown>[]): void {
+  const payload: TbdaCachePayload = {
+    version: TBDA_CACHE_VERSION,
+    timestamp: Date.now(),
+    data: rows,
+  };
+  try {
+    localStorageStore.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+  } catch {}
 }
 
 export const supabaseWithSessionStorage = createClient(

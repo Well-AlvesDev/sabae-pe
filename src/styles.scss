@@ -298,6 +298,59 @@ body {
   color: #b92d23;
 }
 
+.drawer-submenu {
+  width: 100%;
+}
+
+.drawer-submenu summary {
+  list-style: none;
+}
+
+.drawer-submenu summary::-webkit-details-marker {
+  display: none;
+}
+
+.drawer-submenu summary .drawer-submenu-arrow {
+  margin-left: auto;
+  transition: transform 0.2s ease;
+}
+
+.drawer-submenu[open] summary .drawer-submenu-arrow {
+  transform: rotate(180deg);
+}
+
+.drawer-submenu-items {
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px 4px 56px;
+  gap: 2px;
+}
+
+.drawer-submenu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 8px;
+  border-left: 2px solid #d9e6f2;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  background: transparent;
+  color: #52677d;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.25;
+  text-decoration: none;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.drawer-submenu-item:hover,
+.drawer-submenu-item:focus-visible {
+  background: rgba(12, 54, 92, 0.06);
+  color: #0c365c;
+}
+
 .side-drawer::after {
   content: '';
   position: absolute;

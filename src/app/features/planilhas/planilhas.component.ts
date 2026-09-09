@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import type { User } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx-js-style';
+import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getAttendanceCache,
@@ -118,6 +119,15 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   public goToHome(): void {
     this.closeMenu();
     this.router.navigateByUrl('/home');
+  }
+
+  public openStudentOperation(operation: StudentOperation): void {
+    this.closeMenu();
+    this.dialog.open(StudentOperationDialogComponent, {
+      data: { operation },
+      autoFocus: false,
+      maxWidth: 'calc(100vw - 20px)',
+    });
   }
 
   public async logout(): Promise<void> {

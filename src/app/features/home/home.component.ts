@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getTbdaLastSearchLabel,
@@ -638,6 +639,15 @@ export class HomeComponent implements OnInit, OnDestroy {
   public goToChamada(): void {
     this.closeMenu();
     this.router.navigateByUrl('/chamada');
+  }
+
+  public openStudentOperation(operation: StudentOperation): void {
+    this.closeMenu();
+    this.dialog.open(StudentOperationDialogComponent, {
+      data: { operation },
+      autoFocus: false,
+      maxWidth: 'calc(100vw - 20px)',
+    });
   }
 
   async logout(): Promise<void> {
