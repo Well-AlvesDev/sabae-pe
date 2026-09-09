@@ -5,12 +5,15 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "vercel-build": "ng build --configuration production",
+    "vercel-build": "ng build --configuration production --progress=false",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": ">=20.19.0 <25"
+  },
   "dependencies": {
     "@angular/animations": "^21.2.19",
     "@angular/cdk": "^21.2.14",
