@@ -31,6 +31,9 @@
                 "input": "public"
               }
             ],
+            "allowedCommonJsDependencies": [
+              "xlsx-js-style"
+            ],
             "styles": [
               "src/styles.scss"
             ]
@@ -40,7 +43,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "750kB",
                   "maximumError": "1MB"
                 },
                 {

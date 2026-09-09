@@ -7,7 +7,6 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import type { User } from '@supabase/supabase-js';
-import * as XLSX from 'xlsx-js-style';
 import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
@@ -156,7 +155,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     }
   }
 
-  public generateReport(): void {
+  public async generateReport(): Promise<void> {
     if (!this.canGenerateReport) {
       return;
     }
@@ -164,6 +163,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     this.isGeneratingReport = true;
 
     try {
+      const XLSX = await import('xlsx-js-style');
       const month = normalizeAttendanceMonth(this.selectedMonth);
       const requestedRegistrations = this.getRequestedRegistrations();
       const filteredRows = this.tbdaRows
