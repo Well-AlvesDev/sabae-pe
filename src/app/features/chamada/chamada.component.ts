@@ -41,7 +41,7 @@ type StudentAttendance = {
   standalone: true,
   imports: [CommonModule, FormsModule, MatDialogModule, MatFormFieldModule, MatProgressSpinnerModule, MatSelectModule, RouterLink],
   templateUrl: './chamada.html',
-  styleUrls: ['./chamada.scss'],
+  styleUrls: ['./chamada.scss', './chamada-modal.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChamadaComponent implements OnInit, OnDestroy {
