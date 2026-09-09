@@ -5,7 +5,7 @@
     "outputDirectory": "dist/sabae-pe/browser",
     "rewrites": [
         {
-            "source": "/((?!.*\\.[^/]+$).*)",
+            "source": "/(.*)",
             "destination": "/index.html"
         }
     ]
