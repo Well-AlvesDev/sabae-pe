@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ensureTbdaCache, getTbdaClassrooms, updateStudentClassroom, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
+import { ensureTbdaCache, getTbdaClassrooms, updateStudentClassroom, updateStudentName, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
 
 export type StudentOperation =
   | 'Transferir/Matricular Aluno'
@@ -99,16 +99,16 @@ export type StudentOperationDialogData = {
   `,
   styles: [`
     :host { display: block; }
-    .operation-dialog { width: min(560px, calc(100vw - 32px)); padding: 22px; color: #263746; }
+    .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
     .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.3rem; line-height: 1.25; }
     .search-field { display: block; width: 100%; }
-    .dialog-state { display: flex; min-height: 150px; align-items: center; justify-content: center; gap: 10px; color: #64748b; font-size: 0.9rem; text-align: center; }
+    .dialog-state { display: flex; min-height: 0; flex: 1; align-items: center; justify-content: center; gap: 10px; color: #64748b; font-size: 0.9rem; text-align: center; }
     .dialog-state mat-icon { color: #64748b; }
     .error-state { color: #b42318; }
     .error-state mat-icon { color: #b42318; }
-    .student-results { max-height: 320px; overflow-y: auto; padding: 0; }
+    .student-results { min-height: 0; flex: 1; overflow-y: auto; padding: 0; }
     .student-result { border-bottom: 1px solid #e6edf4; cursor: pointer; }
     .student-result:last-child { border-bottom: 0; }
     .student-result:hover, .student-result:focus-visible { background: #f5f9fd; }
@@ -146,6 +146,16 @@ export class StudentOperationDialogComponent {
     if (this.data.operation === 'Alterar Turma do Aluno') {
       this.dialog.open(StudentClassroomDialogComponent, {
         data: { student, classrooms: this.classrooms() },
+        autoFocus: false,
+        maxWidth: 'calc(100vw - 32px)',
+      });
+      this.dialogRef.close();
+      return;
+    }
+
+    if (this.data.operation === 'Alterar Nome do Aluno') {
+      this.dialog.open(StudentNameDialogComponent, {
+        data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
@@ -300,6 +310,103 @@ type StudentClassroomDialogData = {
   student: StudentSearchItem;
   classrooms: string[];
 };
+
+type StudentNameDialogData = {
+  student: StudentSearchItem;
+};
+
+@Component({
+  selector: 'app-student-name-dialog',
+  imports: [CommonModule, FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule],
+  template: `
+    <section class="status-dialog" aria-labelledby="name-dialog-title">
+      <header class="status-dialog-header">
+        <div>
+          <p class="dialog-eyebrow">Atualizar nome</p>
+          <h2 id="name-dialog-title">{{ data.student.name }}</h2>
+          <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+        </div>
+        <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <mat-form-field class="status-field" appearance="outline">
+        <mat-label>Nome do aluno</mat-label>
+        <input matInput [(ngModel)]="newName" autocomplete="off" />
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="error-message" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+      }
+
+      <footer class="status-actions">
+        <button mat-button type="button" mat-dialog-close>Cancelar</button>
+        <button class="execute-button" mat-flat-button type="button" (click)="execute()" [disabled]="isSaving() || !newName.trim()">
+          @if (isSaving()) { <mat-spinner diameter="18"></mat-spinner> }
+          @else { <mat-icon>play_arrow</mat-icon> }
+          Executar
+        </button>
+      </footer>
+    </section>
+  `,
+  styles: [`
+    :host { display: block; }
+    .status-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
+    .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
+    .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
+    .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
+    .status-field { display: block; width: 100%; }
+    .error-message { gap: 7px; margin: 0 0 12px; color: #b42318; font-size: 0.82rem; }
+    .error-message mat-icon { font-size: 19px; }
+    .status-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .status-actions button { display: inline-flex; align-items: center; gap: 6px; }
+    .execute-button { background: #f2b705 !important; color: #263746 !important; }
+    .execute-button:hover:not(:disabled) { background: #d99f00 !important; }
+    .execute-button:disabled { background: #f6d978 !important; color: #6b7280 !important; }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class StudentNameDialogComponent {
+  public newName: string;
+  public readonly isSaving = signal(false);
+  public readonly errorMessage = signal('');
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public readonly data: StudentNameDialogData,
+    private readonly dialogRef: MatDialogRef<StudentNameDialogComponent>,
+    private readonly dialog: MatDialog,
+  ) {
+    this.newName = data.student.name;
+  }
+
+  public async execute(): Promise<void> {
+    const normalizedName = this.newName.trim();
+    if (!normalizedName) {
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+    try {
+      await updateStudentName(this.data.student.registration, this.data.student.name, normalizedName);
+      this.dialogRef.afterClosed().subscribe(() => {
+        this.dialog.open(StudentOperationSuccessDialogComponent, {
+          data: { student: { ...this.data.student, name: normalizedName }, label: 'nome', value: normalizedName },
+          autoFocus: false,
+          maxWidth: 'calc(100vw - 32px)',
+        });
+      });
+      this.dialogRef.close(true);
+    } catch {
+      this.errorMessage.set('Não foi possível atualizar o nome.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+}
 
 @Component({
   selector: 'app-student-classroom-dialog',
