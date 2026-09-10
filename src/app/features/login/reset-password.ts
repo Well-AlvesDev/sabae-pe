@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
-import { CommonModule, NgIf } from '@angular/common';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { CommonModule, NgIf, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +15,7 @@ import { supabase } from '../../supabase';
   imports: [
     CommonModule,
     NgIf,
+    NgOptimizedImage,
     FormsModule,
     MatButtonModule,
     MatCardModule,
@@ -27,11 +28,19 @@ import { supabase } from '../../supabase';
     <div class="reset-shell">
       <mat-card class="reset-card">
         <mat-card-header>
+          <img class="reset-logo" ngSrc="sabae-max2.webp" width="200" height="67" priority alt="SABAE-PE Logo" />
           <mat-card-title>Redefinir senha</mat-card-title>
           <mat-card-subtitle>Escolha uma nova senha para sua conta.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <form class="reset-form" (ngSubmit)="updatePassword()" #passwordForm="ngForm">
+            <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
+              <mat-label>Conta</mat-label>
+              <input matInput type="email" name="accountEmail" [value]="accountEmail || 'Carregando...'"
+                readonly autocomplete="username" />
+              <mat-icon matSuffix>email</mat-icon>
+              <mat-hint>Esta é a conta que terá a senha alterada.</mat-hint>
+            </mat-form-field>
             <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
               <mat-label>Nova senha</mat-label>
               <input matInput [type]="hidePassword ? 'password' : 'text'" name="password"
@@ -64,7 +73,8 @@ import { supabase } from '../../supabase';
   styles: [`
     .reset-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 18px 16px; }
     .reset-card { width: min(420px, 100%); padding: 24px 20px; }
-    .reset-card mat-card-header { display: block; padding: 0 0 18px; }
+    .reset-card mat-card-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 0 18px; }
+    .reset-logo { display: block; width: 200px; height: auto; margin: 0 auto 20px; }
     .reset-form { display: grid; gap: 14px; }
     .full-width { width: 100%; }
     .submit-button { min-height: 44px; }
@@ -74,7 +84,8 @@ import { supabase } from '../../supabase';
     .auth-error { color: #b3261e; }
   `],
 })
-export class ResetPasswordComponent {
+export class ResetPasswordComponent implements OnInit {
+  accountEmail = '';
   password = '';
   confirmation = '';
   hidePassword = true;
@@ -83,6 +94,19 @@ export class ResetPasswordComponent {
   successMessage: string | null = null;
 
   constructor(private cdr: ChangeDetectorRef, private router: Router) {}
+
+  async ngOnInit(): Promise<void> {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data.user?.email) {
+      this.errorMessage = 'Não foi possível identificar a conta. Solicite um novo link de redefinição.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.accountEmail = data.user.email;
+    this.cdr.detectChanges();
+  }
 
   async updatePassword(): Promise<void> {
     this.errorMessage = null;
