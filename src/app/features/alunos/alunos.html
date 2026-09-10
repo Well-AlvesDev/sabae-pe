@@ -49,13 +49,14 @@
                 <span class="material-icons drawer-submenu-arrow">expand_more</span>
             </summary>
             <div class="drawer-submenu-items">
-                <button class="drawer-submenu-item" type="button"
-                    (click)="openStudentOperation('Transferir/Matricular Aluno')">Transferir/Matricular Aluno</button>
-                <button class="drawer-submenu-item" type="button"
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Status do Aluno')">Alterar Status do Aluno
+                    (Transferido/Matriculado)</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
                     (click)="openStudentOperation('Alterar Turma do Aluno')">Alterar Turma do Aluno</button>
-                <button class="drawer-submenu-item" type="button"
+                <button class="drawer-submenu-item alter-operation" type="button"
                     (click)="openStudentOperation('Alterar Nome do Aluno')">Alterar Nome do Aluno</button>
-                <button class="drawer-submenu-item" type="button"
+                <button class="drawer-submenu-item alter-operation" type="button"
                     (click)="openStudentOperation('Alterar turno')">Alterar turno</button>
             </div>
         </details>
@@ -151,17 +152,19 @@
             </mat-list-item>
             }
         </mat-list>
-        <nav class="pagination" aria-label="Paginação da lista de alunos">
-            <button class="pagination-button" type="button" aria-label="Página anterior"
-                [disabled]="currentPage() === 1" (click)="previousPage()">
-                <span class="material-icons" aria-hidden="true">chevron_left</span>
+        @if (totalPages() > 1) {
+        <nav class="pagination" aria-label="Paginação dos alunos">
+            <button mat-icon-button type="button" aria-label="Página anterior" [disabled]="currentPage() === 1"
+                (click)="previousPage()">
+                <mat-icon>chevron_left</mat-icon>
             </button>
-            <span class="pagination-status" aria-live="polite">Página {{ currentPage() }} de {{ totalPages() }}</span>
-            <button class="pagination-button" type="button" aria-label="Próxima página"
+            <span aria-live="polite">Página {{ currentPage() }} de {{ totalPages() }}</span>
+            <button mat-icon-button type="button" aria-label="Próxima página"
                 [disabled]="currentPage() === totalPages()" (click)="nextPage()">
-                <span class="material-icons" aria-hidden="true">chevron_right</span>
+                <mat-icon>chevron_right</mat-icon>
             </button>
         </nav>
+        }
         }
     </section>
 </main>

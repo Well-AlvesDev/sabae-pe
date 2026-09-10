@@ -141,6 +141,7 @@ export type AttendanceCacheStudent = {
   name: string;
   registration: string;
   room?: string;
+  shift?: string;
   status: AttendanceCacheStatus | null;
 };
 
@@ -399,13 +400,17 @@ function normalizeAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Attend
     month: normalizeAttendanceMonth(entry.month),
     day: String(entry.day ?? '').trim(),
     savedAt: Number(entry.savedAt ?? Date.now()),
-    students: Array.isArray(entry.students) ? entry.students.map(student => ({
-      name: String(student?.name ?? '').trim(),
-      registration: String(student?.registration ?? '').trim(),
-      room: String(student?.room ?? entry.room ?? '').trim(),
-      status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
-        || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
-    })).filter(student => student.name || student.registration) : [],
+    students: Array.isArray(entry.students) ? entry.students.map(student => {
+      const shift = String(student?.shift ?? '').trim();
+      return {
+        name: String(student?.name ?? '').trim(),
+        registration: String(student?.registration ?? '').trim(),
+        room: String(student?.room ?? entry.room ?? '').trim(),
+        ...(shift ? { shift } : {}),
+        status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+          || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
+      };
+    }).filter(student => student.name || student.registration) : [],
   };
 }
 
@@ -482,13 +487,17 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
           month,
           day,
           savedAt: Number(candidate.savedAt ?? Date.now()),
-          students: students.map((student): AttendanceCacheStudent => ({
-            name: String(student?.name ?? '').trim(),
-            registration: String(student?.registration ?? '').trim(),
-            room: String(student?.room ?? room).trim(),
-            status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
-              || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
-          })),
+          students: students.map((student): AttendanceCacheStudent => {
+            const shift = String(student?.shift ?? '').trim();
+            return {
+              name: String(student?.name ?? '').trim(),
+              registration: String(student?.registration ?? '').trim(),
+              room: String(student?.room ?? room).trim(),
+              ...(shift ? { shift } : {}),
+              status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+                || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
+            };
+          }),
         } satisfies AttendanceCacheEntry;
       })
       .filter((entry): entry is AttendanceCacheEntry => entry !== null);
@@ -528,6 +537,20 @@ export function getTbdaClassrooms(rows: Record<string, unknown>[] | null = getTb
     new Set(
       rows
         .map(row => String(row['TURMA'] ?? row['turma'] ?? '').trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+export function getTbdaShifts(rows: Record<string, unknown>[] | null = getTbdaCache()): string[] {
+  if (!rows) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      rows
+        .map(row => String(row['TURNO'] ?? row['turno'] ?? '').trim())
         .filter(Boolean),
     ),
   ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -628,7 +651,148 @@ export async function updateStudentClassroom(
     throw new Error('Dados insuficientes para atualizar a turma.');
   }
 
-  let query = supabase.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom });
+  const tbdaRows = getTbdaCache();
+  const attendanceEntries = getAttendanceCache();
+  const matchingRows = tbdaRows?.filter(row => matchesStudent(row, normalizedRegistration, normalizedName)) ?? [];
+  const attendanceCells = getClassroomAttendanceCells(tbdaRows ?? [], attendanceEntries, normalizedClassroom);
+  const studentRow = matchingRows[0];
+  const attendanceUpdates = studentRow
+    ? Object.fromEntries(
+        attendanceCells
+          .filter(cell => !hasAttendanceForMonth(studentRow[cell.day], cell.month))
+          .map(cell => [cell.day, appendAttendanceCellValue(studentRow[cell.day], 'P', cell.month)]),
+      )
+    : {};
+
+  let query = supabase.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom, ...attendanceUpdates });
+  const result = normalizedRegistration
+    ? await query.eq('MAT', normalizedRegistration)
+    : await query.eq('NOME', normalizedName);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const refreshedRows = await syncTbdaCache();
+  const refreshedStudent = refreshedRows.find(row => matchesStudent(row, normalizedRegistration, normalizedName));
+  if (!refreshedStudent) {
+    throw new Error('A alteração foi confirmada, mas o aluno não foi encontrado na atualização do TBDA.');
+  }
+
+  const updatedEntries = attendanceEntries.map(entry => ({
+    ...entry,
+    students: (() => {
+      let studentFound = false;
+      const students = entry.students.map(student => {
+        if (!matchesStudent(student, normalizedRegistration, normalizedName)) {
+          return student;
+        }
+
+        studentFound = true;
+        const attendanceMonth = Number.parseInt(normalizeAttendanceMonth(entry.month), 10);
+        const attendanceStatus = entry.room === normalizedClassroom
+          ? getAttendanceStatusForMonth(refreshedStudent[String(entry.day)], attendanceMonth)
+          : null;
+        return {
+          ...student,
+          name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? student.name).trim(),
+          room: String(refreshedStudent['TURMA'] ?? refreshedStudent['turma'] ?? normalizedClassroom).trim(),
+          shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? student.shift ?? '').trim() || student.shift,
+          status: entry.room === normalizedClassroom
+            ? attendanceStatus ?? student.status ?? 'P'
+            : student.status,
+        };
+      });
+
+      return entry.room === normalizedClassroom && !studentFound
+        ? [...students, {
+            name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? normalizedName).trim(),
+            registration: String(refreshedStudent['MAT'] ?? refreshedStudent['mat'] ?? normalizedRegistration).trim(),
+            room: String(refreshedStudent['TURMA'] ?? refreshedStudent['turma'] ?? normalizedClassroom).trim(),
+            shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? '').trim(),
+            status: getAttendanceStatusForMonth(
+              refreshedStudent[String(entry.day)],
+              Number.parseInt(normalizeAttendanceMonth(entry.month), 10),
+            ) ?? 'P',
+          }]
+        : students;
+    })(),
+  }));
+  try {
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+  } catch {}
+}
+
+type ClassroomAttendanceCell = {
+  day: string;
+  month: number;
+};
+
+function getClassroomAttendanceCells(
+  rows: Record<string, unknown>[],
+  entries: AttendanceCacheEntry[],
+  classroom: string,
+): ClassroomAttendanceCell[] {
+  const cells = new Map<string, ClassroomAttendanceCell>();
+
+  rows
+    .filter(row => String(row['TURMA'] ?? row['turma'] ?? '').trim() === classroom)
+    .forEach(row => {
+      for (const day of TBDA_COLUMNS) {
+        const value = String(row[day] ?? '').trim();
+        for (const match of value.matchAll(/(?:P|FNJ|FJ):(\d{1,2})/g)) {
+          const month = Number(match[1]);
+          if (month >= 1 && month <= 12) {
+            cells.set(`${day}:${month}`, { day, month });
+          }
+        }
+      }
+    });
+
+  entries
+    .filter(entry => entry.room === classroom)
+    .forEach(entry => {
+      const month = Number.parseInt(normalizeAttendanceMonth(entry.month), 10);
+      const day = String(entry.day ?? '').trim();
+      if (day && month >= 1 && month <= 12) {
+        cells.set(`${day}:${month}`, { day, month });
+      }
+    });
+
+  return Array.from(cells.values());
+}
+
+function hasAttendanceForMonth(value: unknown, month: number): boolean {
+  return getAttendanceStatusForMonth(value, month) !== null;
+}
+
+function getAttendanceStatusForMonth(value: unknown, month: number): 'P' | 'FNJ' | 'FJ' | null {
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    return null;
+  }
+
+  const monthPattern = String(month).padStart(2, '0');
+  const match = String(value ?? '')
+    .split(',')
+    .map(token => token.trim().match(/^(P|FNJ|FJ):0?(\d{1,2})$/))
+    .find(candidate => candidate?.[2] === String(month) || candidate?.[2] === monthPattern);
+
+  return (match?.[1] as 'P' | 'FNJ' | 'FJ' | undefined) ?? null;
+}
+
+export async function updateStudentShift(
+  registration: string,
+  name: string,
+  shift: string,
+): Promise<void> {
+  const normalizedRegistration = String(registration ?? '').trim();
+  const normalizedName = String(name ?? '').trim();
+  const normalizedShift = String(shift ?? '').trim();
+  if ((!normalizedRegistration && !normalizedName) || !normalizedShift) {
+    throw new Error('Dados insuficientes para atualizar o turno.');
+  }
+
+  let query = supabase.from(TBDA_TABLE_NAME).update({ TURNO: normalizedShift });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -640,7 +804,7 @@ export async function updateStudentClassroom(
   const tbdaRows = getTbdaCache();
   if (tbdaRows) {
     const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
-    matchingRows.forEach(row => { row['TURMA'] = normalizedClassroom; });
+    matchingRows.forEach(row => { row['TURNO'] = normalizedShift; });
     if (matchingRows.length) {
       saveTbdaCache(tbdaRows);
     }
@@ -651,7 +815,7 @@ export async function updateStudentClassroom(
     ...entry,
     students: entry.students.map(student =>
       matchesStudent(student, normalizedRegistration, normalizedName)
-        ? { ...student, room: normalizedClassroom }
+        ? { ...student, shift: normalizedShift }
         : student,
     ),
   }));
@@ -707,8 +871,15 @@ export async function updateStudentName(
 function matchesStudent(row: Record<string, unknown>, registration: string, name: string): boolean {
   const rowRegistration = String(row['MAT'] ?? row['MATRICULA'] ?? row['MATRÍCULA'] ?? row['registration'] ?? '').trim();
   const rowName = String(row['NOME'] ?? row['name'] ?? '').trim();
-  return (Boolean(registration) && rowRegistration === registration)
-    || (!registration && Boolean(name) && rowName === name);
+  if (registration && rowRegistration) {
+    return rowRegistration === registration;
+  }
+
+  return Boolean(name) && normalizeStudentName(rowName) === normalizeStudentName(name);
+}
+
+function normalizeStudentName(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
 }
 
 function saveTbdaCache(rows: Record<string, unknown>[]): void {

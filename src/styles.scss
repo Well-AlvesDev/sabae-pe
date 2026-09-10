@@ -345,6 +345,10 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
+.drawer-submenu-item.alter-operation {
+  border-left-color: #f2b705;
+}
+
 .drawer-submenu-item:hover,
 .drawer-submenu-item:focus-visible {
   background: rgba(12, 54, 92, 0.06);

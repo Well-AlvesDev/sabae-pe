@@ -7,7 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import type { User } from '@supabase/supabase-js';
-import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
+import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getAttendanceCache,
@@ -51,6 +51,8 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   private _logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
+  private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
+    .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
 
@@ -120,8 +122,9 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     this.router.navigateByUrl('/home');
   }
 
-  public openStudentOperation(operation: StudentOperation): void {
+  public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
+    const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
     this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,

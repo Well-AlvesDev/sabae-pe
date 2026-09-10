@@ -7,8 +7,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router, RouterLink } from '@angular/router';
+import { take } from 'rxjs';
 import { AttendanceDeleteConfirmDialogComponent, AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
-import { StudentOperationDialogComponent, type StudentOperation } from '../alunos/student-operation.dialog';
+import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getAttendanceCache,
@@ -85,6 +86,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   private _logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
+  private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
+    .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
   private useSessionStorageForTbdaCache = false;
 
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
@@ -175,12 +178,17 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.router.navigateByUrl('/home');
   }
 
-  public openStudentOperation(operation: StudentOperation): void {
+  public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
+    const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
     this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,
       maxWidth: 'calc(100vw - 20px)',
+    });
+    this.dialog.afterAllClosed.pipe(take(1)).subscribe(() => {
+      this.loadSavedAttendances();
+      this.cdr.detectChanges();
     });
   }
 
@@ -226,7 +234,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
         status: 'P' as const,
       }))
       .filter(student => student.name)
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      .sort(this.compareStudents);
     this.isAttendanceModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -254,7 +262,9 @@ export class ChamadaComponent implements OnInit, OnDestroy {
             status: 'P' as const,
           }))
           .filter(student => student.name)
-          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+              .sort(this.compareStudents);
+
+            this.students.sort(this.compareStudents);
 
     this.isAttendanceModalOpen = true;
     this.cdr.detectChanges();
@@ -547,6 +557,11 @@ export class ChamadaComponent implements OnInit, OnDestroy {
 
   private hasDuplicateSavedAttendance(room: string, monthName: string, day: string): boolean {
     return this.findSavedAttendance(room, monthName, day) !== null;
+  }
+
+  private compareStudents(first: StudentAttendance, second: StudentAttendance): number {
+    return first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' })
+      || first.registration.localeCompare(second.registration, 'pt-BR', { numeric: true });
   }
 
   private findSavedAttendance(room: string, monthName: string, day: string): AttendanceCacheEntry | null {

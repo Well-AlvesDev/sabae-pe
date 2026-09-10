@@ -1,14 +1,16 @@
 import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
-import { StudentOperationDialogComponent, type StudentOperation } from './student-operation.dialog';
+import { type StudentOperation } from './student-operation.dialog';
 
 type AttendanceStatus = 'P' | 'FNJ' | 'FJ';
 
@@ -23,7 +25,7 @@ type StudentAbsence = {
 
 @Component({
   selector: 'app-alunos',
-  imports: [CommonModule, MatDialogModule, MatFormFieldModule, MatListModule, MatProgressSpinnerModule, MatSelectModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatListModule, MatProgressSpinnerModule, MatSelectModule, RouterLink, RouterLinkActive],
   templateUrl: './alunos.html',
   styleUrl: './alunos.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,6 +70,8 @@ export class AlunosComponent implements OnInit, OnDestroy {
   private logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
+  private readonly studentOperationDialogComponentPromise = import('./student-operation.dialog')
+    .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
   constructor(private readonly router: Router, private readonly dialog: MatDialog) {}
 
@@ -146,8 +150,9 @@ export class AlunosComponent implements OnInit, OnDestroy {
     this.isMenuOpen.set(false);
   }
 
-  public openStudentOperation(operation: StudentOperation): void {
+  public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
+    const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
     this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,

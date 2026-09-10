@@ -9,10 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ensureTbdaCache, getTbdaClassrooms, updateStudentClassroom, updateStudentName, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
+import { ensureTbdaCache, getTbdaClassrooms, getTbdaShifts, updateStudentClassroom, updateStudentName, updateStudentShift, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
 
 export type StudentOperation =
-  | 'Transferir/Matricular Aluno'
+  | 'Alterar Status do Aluno'
   | 'Alterar Turma do Aluno'
   | 'Alterar Nome do Aluno'
   | 'Alterar turno';
@@ -21,6 +21,7 @@ type StudentSearchItem = {
   name: string;
   registration: string;
   room: string;
+  shift: string;
   status: StudentAdministrativeStatus;
 };
 
@@ -57,10 +58,10 @@ export type StudentOperationDialogData = {
       <mat-form-field class="search-field" appearance="outline">
         <mat-label>Pesquisar aluno</mat-label>
         <mat-icon matPrefix>search</mat-icon>
-        <input matInput [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"
+        <input matInput [ngModel]="searchTerm()" (ngModelChange)="setSearchTerm($event)"
           placeholder="Nome ou matrícula" autocomplete="off" />
         @if (searchTerm()) {
-          <button mat-icon-button matSuffix type="button" aria-label="Limpar pesquisa" (click)="searchTerm.set('')">
+          <button mat-icon-button matSuffix type="button" aria-label="Limpar pesquisa" (click)="setSearchTerm('')">
             <mat-icon>close</mat-icon>
           </button>
         }
@@ -83,7 +84,7 @@ export type StudentOperationDialogData = {
         </div>
       } @else {
         <mat-list class="student-results" aria-label="Resultados da pesquisa">
-          @for (student of filteredStudents(); track student.registration + student.name) {
+          @for (student of paginatedStudents(); track student.registration + student.name) {
             <mat-list-item class="student-result" (click)="selectStudent(student)" role="button">
               <mat-icon matListItemIcon>person</mat-icon>
               <span matListItemTitle>{{ student.name }}</span>
@@ -94,6 +95,19 @@ export type StudentOperationDialogData = {
             </mat-list-item>
           }
         </mat-list>
+        @if (totalPages() > 1) {
+          <nav class="pagination" aria-label="Paginação dos alunos">
+            <button mat-icon-button type="button" aria-label="Página anterior"
+              [disabled]="currentPage() === 1" (click)="previousPage()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <span aria-live="polite">Página {{ currentPage() }} de {{ totalPages() }}</span>
+            <button mat-icon-button type="button" aria-label="Próxima página"
+              [disabled]="currentPage() === totalPages()" (click)="nextPage()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </nav>
+        }
       }
     </section>
   `,
@@ -101,7 +115,7 @@ export type StudentOperationDialogData = {
     :host { display: block; }
     .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
     .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.3rem; line-height: 1.25; }
     .search-field { display: block; width: 100%; }
     .dialog-state { display: flex; min-height: 0; flex: 1; align-items: center; justify-content: center; gap: 10px; color: #64748b; font-size: 0.9rem; text-align: center; }
@@ -112,6 +126,7 @@ export type StudentOperationDialogData = {
     .student-result { border-bottom: 1px solid #e6edf4; cursor: pointer; }
     .student-result:last-child { border-bottom: 0; }
     .student-result:hover, .student-result:focus-visible { background: #f5f9fd; }
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 10px; color: #526579; font-size: 0.85rem; }
     @media (max-width: 480px) { .operation-dialog { padding: 18px 14px; } }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -122,6 +137,9 @@ export class StudentOperationDialogComponent {
   public readonly hasError = signal(false);
   public readonly students = signal<StudentSearchItem[]>([]);
   public readonly classrooms = signal<string[]>([]);
+  public readonly shifts = signal<string[]>([]);
+  public readonly currentPage = signal(1);
+  public readonly pageSize = 25;
   public readonly filteredStudents = computed(() => {
     const term = this.normalize(this.searchTerm());
     if (!term) {
@@ -131,9 +149,27 @@ export class StudentOperationDialogComponent {
       this.normalize(student.name).includes(term) || this.normalize(student.registration).includes(term),
     );
   });
+  public readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredStudents().length / this.pageSize)));
+  public readonly paginatedStudents = computed(() => {
+    const startIndex = (this.currentPage() - 1) * this.pageSize;
+    return this.filteredStudents().slice(startIndex, startIndex + this.pageSize);
+  });
+
+  public setSearchTerm(value: string): void {
+    this.searchTerm.set(value);
+    this.currentPage.set(1);
+  }
+
+  public previousPage(): void {
+    this.currentPage.update(page => Math.max(1, page - 1));
+  }
+
+  public nextPage(): void {
+    this.currentPage.update(page => Math.min(this.totalPages(), page + 1));
+  }
 
   public selectStudent(student: StudentSearchItem): void {
-    if (this.data.operation === 'Transferir/Matricular Aluno') {
+    if (this.data.operation === 'Alterar Status do Aluno') {
       this.dialog.open(StudentTransferStatusDialogComponent, {
         data: { student },
         autoFocus: false,
@@ -163,6 +199,16 @@ export class StudentOperationDialogComponent {
       return;
     }
 
+    if (this.data.operation === 'Alterar turno') {
+      this.dialog.open(StudentShiftDialogComponent, {
+        data: { student, shifts: this.shifts() },
+        autoFocus: false,
+        maxWidth: 'calc(100vw - 32px)',
+      });
+      this.dialogRef.close();
+      return;
+    }
+
     this.dialogRef.close(student);
   }
 
@@ -178,10 +224,12 @@ export class StudentOperationDialogComponent {
     try {
       const rows = await ensureTbdaCache();
       this.classrooms.set(getTbdaClassrooms(rows));
+      this.shifts.set(getTbdaShifts(rows));
       this.students.set(rows.map(row => ({
         name: this.getValue(row, 'NOME'),
         registration: this.getValue(row, 'MAT', 'MATRICULA', 'MATRÍCULA'),
         room: this.getValue(row, 'TURMA'),
+        shift: this.getValue(row, 'TURNO'),
         status: this.getStudentStatus(row),
       })).filter(student => student.name));
     } catch {
@@ -222,7 +270,7 @@ type StudentTransferStatusDialogData = {
     <section class="status-dialog" aria-labelledby="status-dialog-title">
       <header class="status-dialog-header">
         <div>
-          <p class="dialog-eyebrow">Atualizar status</p>
+          <p class="dialog-eyebrow">Atribuir status para:</p>
           <h2 id="status-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
         </div>
@@ -258,7 +306,7 @@ type StudentTransferStatusDialogData = {
     .status-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
     .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
     .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
-    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
     .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
     .status-field { display: block; width: 100%; }
@@ -311,6 +359,11 @@ type StudentClassroomDialogData = {
   classrooms: string[];
 };
 
+type StudentShiftDialogData = {
+  student: StudentSearchItem;
+  shifts: string[];
+};
+
 type StudentNameDialogData = {
   student: StudentSearchItem;
 };
@@ -322,7 +375,7 @@ type StudentNameDialogData = {
     <section class="status-dialog" aria-labelledby="name-dialog-title">
       <header class="status-dialog-header">
         <div>
-          <p class="dialog-eyebrow">Atualizar nome</p>
+          <p class="dialog-eyebrow">Atribuir nome para:</p>
           <h2 id="name-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
         </div>
@@ -355,7 +408,7 @@ type StudentNameDialogData = {
     .status-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
     .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
     .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
-    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
     .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
     .status-field { display: block; width: 100%; }
@@ -415,7 +468,7 @@ export class StudentNameDialogComponent {
     <section class="status-dialog" aria-labelledby="classroom-dialog-title">
       <header class="status-dialog-header">
         <div>
-          <p class="dialog-eyebrow">Atualizar turma</p>
+          <p class="dialog-eyebrow">Atribuir turma para:</p>
           <h2 id="classroom-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
         </div>
@@ -452,7 +505,7 @@ export class StudentNameDialogComponent {
     .status-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
     .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
     .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
-    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
     .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
     .status-field { display: block; width: 100%; }
@@ -494,6 +547,102 @@ export class StudentClassroomDialogComponent {
       this.dialogRef.close(true);
     } catch {
       this.errorMessage.set('Não foi possível atualizar a turma.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+}
+
+@Component({
+  selector: 'app-student-shift-dialog',
+  imports: [CommonModule, FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatProgressSpinnerModule, MatSelectModule],
+  template: `
+    <section class="status-dialog" aria-labelledby="shift-dialog-title">
+      <header class="status-dialog-header">
+        <div>
+          <p class="dialog-eyebrow">Atribuir turno para:</p>
+          <h2 id="shift-dialog-title">{{ data.student.name }}</h2>
+          <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+        </div>
+        <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <mat-form-field class="status-field" appearance="outline">
+        <mat-label>Novo turno</mat-label>
+        <mat-select [(ngModel)]="shift">
+          @for (availableShift of data.shifts; track availableShift) {
+            <mat-option [value]="availableShift">{{ availableShift }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="error-message" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+      }
+
+      <footer class="status-actions">
+        <button mat-button type="button" mat-dialog-close>Cancelar</button>
+        <button class="execute-button" mat-flat-button type="button" (click)="execute()" [disabled]="isSaving() || !shift">
+          @if (isSaving()) { <mat-spinner diameter="18"></mat-spinner> }
+          @else { <mat-icon>play_arrow</mat-icon> }
+          Executar
+        </button>
+      </footer>
+    </section>
+  `,
+  styles: [`
+    :host { display: block; }
+    .status-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
+    .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
+    .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
+    .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
+    .status-field { display: block; width: 100%; }
+    .error-message { gap: 7px; margin: 0 0 12px; color: #b42318; font-size: 0.82rem; }
+    .error-message mat-icon { font-size: 19px; }
+    .status-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .status-actions button { display: inline-flex; align-items: center; gap: 6px; }
+    .execute-button { background: #f2b705 !important; color: #263746 !important; }
+    .execute-button:hover:not(:disabled) { background: #d99f00 !important; }
+    .execute-button:disabled { background: #f6d978 !important; color: #6b7280 !important; }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class StudentShiftDialogComponent {
+  public shift: string;
+  public readonly isSaving = signal(false);
+  public readonly errorMessage = signal('');
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public readonly data: StudentShiftDialogData,
+    private readonly dialogRef: MatDialogRef<StudentShiftDialogComponent>,
+    private readonly dialog: MatDialog,
+  ) {
+    this.shift = data.student.shift || data.shifts[0] || '';
+  }
+
+  public async execute(): Promise<void> {
+    if (!this.shift) {
+      return;
+    }
+
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+    try {
+      await updateStudentShift(this.data.student.registration, this.data.student.name, this.shift);
+      this.dialogRef.afterClosed().subscribe(() => {
+        this.dialog.open(StudentOperationSuccessDialogComponent, {
+          data: { student: { ...this.data.student, shift: this.shift }, label: 'turno', value: this.shift },
+          autoFocus: false,
+          maxWidth: 'calc(100vw - 32px)',
+        });
+      });
+      this.dialogRef.close(true);
+    } catch {
+      this.errorMessage.set('Não foi possível atualizar o turno.');
     } finally {
       this.isSaving.set(false);
     }
