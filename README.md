@@ -105,6 +105,10 @@ O workflow `.github/workflows/deploy-hostinger.yml` compila e envia automaticame
 
 O workflow publica via FTPS em `/public_html/`. Se usar o recurso de Git do hPanel diretamente, configure o deploy para uma pasta que contenha os arquivos já compilados; publicar a raiz do repositório causa erro `403` porque ela não possui o `index.html` de produção.
 
+### Versão do Node.js na Hostinger
+
+Selecione Node.js **22.22.3 ou superior dentro da série 22** no hPanel. Como alternativa, use Node.js **24.15.0 ou superior**. A versão `22.18.0` não é compatível com o Angular 22 e faz o build falhar, mesmo que o `npm install` termine com apenas avisos.
+
 ## Observações importantes
 
 - O projeto usa Supabase para autenticação e persistência de dados.
