@@ -596,6 +596,61 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
 
 export type StudentAdministrativeStatus = 'Transferido' | 'Matriculado';
 
+export type NewStudentInput = {
+  name: string;
+  registration: string;
+  classroom: string;
+  shift: string;
+};
+
+export async function insertStudent(input: NewStudentInput): Promise<void> {
+  const name = String(input.name ?? '').trim();
+  const registration = String(input.registration ?? '').trim();
+  const classroom = String(input.classroom ?? '').trim();
+  const shift = String(input.shift ?? '').trim();
+
+  if (!name || !registration || !classroom || !shift) {
+    throw new Error('Preencha nome, matrícula, turma e turno para inserir o aluno.');
+  }
+
+  const result = await supabase
+    .from(TBDA_TABLE_NAME)
+    .insert({ MAT: registration, NOME: name, TURMA: classroom, TURNO: shift, STATUS: 'Matriculado' })
+    .select(TBDA_SELECT)
+    .single();
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const refreshedRows = await syncTbdaCache();
+  refreshAttendanceCacheFromTbda(refreshedRows);
+}
+
+function refreshAttendanceCacheFromTbda(rows: Record<string, unknown>[]): void {
+  const attendanceEntries = getAttendanceCache();
+  const updatedEntries = attendanceEntries.map(entry => ({
+    ...entry,
+    students: entry.students.map(student => {
+      const refreshedStudent = rows.find(row => matchesStudent(row, student.registration, student.name));
+      if (!refreshedStudent) {
+        return student;
+      }
+
+      return {
+        ...student,
+        name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? student.name).trim(),
+        room: String(refreshedStudent['TURMA'] ?? refreshedStudent['turma'] ?? student.room ?? '').trim(),
+        shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? student.shift ?? '').trim() || student.shift,
+      };
+    }),
+  }));
+
+  try {
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+  } catch {}
+}
+
 export async function updateStudentStatus(
   registration: string,
   name: string,

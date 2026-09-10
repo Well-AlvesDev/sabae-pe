@@ -9,9 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ensureTbdaCache, getTbdaClassrooms, getTbdaShifts, updateStudentClassroom, updateStudentName, updateStudentShift, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
+import { ensureTbdaCache, getTbdaClassrooms, getTbdaShifts, insertStudent, updateStudentClassroom, updateStudentName, updateStudentShift, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
 
 export type StudentOperation =
+  | 'Adicionar Aluno'
   | 'Alterar Status do Aluno'
   | 'Alterar Turma do Aluno'
   | 'Alterar Nome do Aluno'
@@ -55,6 +56,50 @@ export type StudentOperationDialogData = {
         </button>
       </header>
 
+      @if (data.operation === 'Adicionar Aluno') {
+        <p class="registration-help">
+          O preenchimento de todos os campos é obrigatório. Ao cadastrar, o aluno será registrado no sistema e os dados
+          serão atualizados automaticamente.
+        </p>
+        <form class="student-registration-form" (ngSubmit)="submitNewStudent()">
+          <mat-form-field appearance="outline">
+            <mat-label>Nome</mat-label>
+            <input matInput name="name" [(ngModel)]="newStudent.name" autocomplete="name" required />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Matrícula</mat-label>
+            <input matInput name="registration" [(ngModel)]="newStudent.registration" inputmode="numeric" required />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Turma</mat-label>
+            <mat-select name="classroom" [(ngModel)]="newStudent.classroom" required>
+              <mat-option value="" disabled>Selecione a turma</mat-option>
+              @for (classroom of classrooms(); track classroom) {
+                <mat-option [value]="classroom">{{ classroom }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Turno</mat-label>
+            <mat-select name="shift" [(ngModel)]="newStudent.shift" required>
+              <mat-option value="" disabled>Selecione o turno</mat-option>
+              @for (shift of shifts(); track shift) {
+                <mat-option [value]="shift">{{ shift }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          @if (registrationError()) {
+            <p class="registration-error" role="alert">{{ registrationError() }}</p>
+          }
+          <button class="insert-button" mat-flat-button type="submit" [disabled]="isSubmitting()">
+            @if (isSubmitting()) {
+              <mat-spinner diameter="20" aria-label="Inserindo aluno"></mat-spinner>
+            } @else {
+            Cadastrar Aluno
+            }
+          </button>
+        </form>
+      } @else {
       <mat-form-field class="search-field" appearance="outline">
         <mat-label>Pesquisar aluno</mat-label>
         <mat-icon matPrefix>search</mat-icon>
@@ -109,15 +154,23 @@ export type StudentOperationDialogData = {
           </nav>
         }
       }
+      }
     </section>
   `,
   styles: [`
     :host { display: block; }
     .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
     .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
-    .dialog-eyebrow { margin: 0 0 4px; color: #f2b705; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #34b447; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     h2 { margin: 0; color: #0c365c; font-size: 1.3rem; line-height: 1.25; }
     .search-field { display: block; width: 100%; }
+    .student-registration-form { display: flex; flex-direction: column; gap: 8px; }
+    .student-registration-form mat-form-field { width: 100%; }
+    .registration-help { margin: 0 0 12px; color: #64748b; font-size: 0.84rem; line-height: 1.4; }
+    .registration-error { margin: 0 0 4px; color: #b42318; font-size: 0.85rem; }
+    .insert-button { align-self: flex-end; min-width: 104px; min-height: 42px; background: #34b447 !important; color: #fff !important; }
+    .insert-button:hover:not(:disabled) { background: #278d36 !important; }
+    .insert-button:disabled { background: #8bc991 !important; color: #f4fff5 !important; }
     .dialog-state { display: flex; min-height: 0; flex: 1; align-items: center; justify-content: center; gap: 10px; color: #64748b; font-size: 0.9rem; text-align: center; }
     .dialog-state mat-icon { color: #64748b; }
     .error-state { color: #b42318; }
@@ -138,6 +191,9 @@ export class StudentOperationDialogComponent {
   public readonly students = signal<StudentSearchItem[]>([]);
   public readonly classrooms = signal<string[]>([]);
   public readonly shifts = signal<string[]>([]);
+  public readonly isSubmitting = signal(false);
+  public readonly registrationError = signal('');
+  public readonly newStudent = { name: '', registration: '', classroom: '', shift: '' };
   public readonly currentPage = signal(1);
   public readonly pageSize = 25;
   public readonly filteredStudents = computed(() => {
@@ -166,6 +222,29 @@ export class StudentOperationDialogComponent {
 
   public nextPage(): void {
     this.currentPage.update(page => Math.min(this.totalPages(), page + 1));
+  }
+
+  public async submitNewStudent(): Promise<void> {
+    this.registrationError.set('');
+    if (Object.values(this.newStudent).some(value => !value.trim())) {
+      this.registrationError.set('Preencha nome, matrícula, turma e turno.');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    try {
+      await insertStudent({
+        name: this.newStudent.name,
+        registration: this.newStudent.registration,
+        classroom: this.newStudent.classroom,
+        shift: this.newStudent.shift,
+      });
+      this.dialogRef.close(true);
+    } catch (error) {
+      this.registrationError.set(error instanceof Error ? error.message : 'Não foi possível inserir o aluno.');
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
   public selectStudent(student: StudentSearchItem): void {
@@ -217,7 +296,21 @@ export class StudentOperationDialogComponent {
     private readonly dialogRef: MatDialogRef<StudentOperationDialogComponent>,
     private readonly dialog: MatDialog,
   ) {
-    void this.loadStudents();
+    if (data.operation !== 'Adicionar Aluno') {
+      void this.loadStudents();
+    } else {
+      void this.loadStudentOptions();
+    }
+  }
+
+  private async loadStudentOptions(): Promise<void> {
+    try {
+      const rows = await ensureTbdaCache();
+      this.classrooms.set(getTbdaClassrooms(rows));
+      this.shifts.set(getTbdaShifts(rows));
+    } catch {
+      this.registrationError.set('Não foi possível carregar as opções de turma e turno.');
+    }
   }
 
   private async loadStudents(): Promise<void> {

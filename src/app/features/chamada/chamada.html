@@ -52,6 +52,10 @@
                 <span class="material-icons drawer-submenu-arrow">expand_more</span>
             </summary>
             <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Adicionar Aluno')">
+                    Adicionar Aluno
+                </button>
                 <button class="drawer-submenu-item alter-operation" type="button"
                     (click)="openStudentOperation('Alterar Status do Aluno')">Alterar Status do Aluno
                     (Transferido/Matriculado)</button>
@@ -200,10 +204,12 @@
         </div>
 
         <div class="student-list" role="list">
-            <article class="student-card" *ngFor="let student of students" role="listitem">
+            <article class="student-card" *ngFor="let student of students"
+                [class.transferred-card]="student.isTransferred" role="listitem">
                 <div class="student-info">
                     <strong>{{ student.name }}</strong>
                     <span *ngIf="student.registration">Matrícula: {{ student.registration }}</span>
+                    <span *ngIf="student.isTransferred" class="transferred-label">TRANSFERIDO</span>
                 </div>
                 <div class="attendance-actions" role="group" [attr.aria-label]="'Frequência de ' + student.name">
                     <button type="button" [class.selected-present]="student.status === 'P'"

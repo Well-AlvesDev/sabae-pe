@@ -35,6 +35,7 @@ type StudentAttendance = {
   name: string;
   registration: string;
   status: AttendanceStatus;
+  isTransferred: boolean;
 };
 
 @Component({
@@ -231,7 +232,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       .map(row => ({
         name: this.getRowText(row, 'NOME'),
         registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
-        status: 'P' as const,
+        status: this.isTransferredRow(row) ? 'FNJ' as const : 'P' as const,
+        isTransferred: this.isTransferredRow(row),
       }))
       .filter(student => student.name)
       .sort(this.compareStudents);
@@ -249,17 +251,27 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     this.selectedDay = String(attendance.day ?? '').trim() || this.selectedDay;
 
     this.students = Array.isArray(attendance.students) && attendance.students.length
-      ? attendance.students.map(student => ({
-          name: String(student?.name ?? '').trim(),
-          registration: String(student?.registration ?? '').trim(),
-          status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
-        }))
+      ? attendance.students.map(student => {
+          const name = String(student?.name ?? '').trim();
+          const registration = String(student?.registration ?? '').trim();
+          const isTransferred = student?.status === 'Transferido'
+            || this.isTransferredStudent(registration, name);
+          return {
+            name,
+            registration,
+            status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+              ? student.status
+              : isTransferred ? 'FNJ' as const : null,
+            isTransferred,
+          };
+        })
       : this.tbdaRows
           .filter(row => this.getRowText(row, 'TURMA') === this.selectedRoom)
           .map(row => ({
             name: this.getRowText(row, 'NOME'),
             registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
-            status: 'P' as const,
+            status: this.isTransferredRow(row) ? 'FNJ' as const : 'P' as const,
+            isTransferred: this.isTransferredRow(row),
           }))
           .filter(student => student.name)
               .sort(this.compareStudents);
@@ -562,6 +574,19 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   private compareStudents(first: StudentAttendance, second: StudentAttendance): number {
     return first.name.localeCompare(second.name, 'pt-BR', { sensitivity: 'base' })
       || first.registration.localeCompare(second.registration, 'pt-BR', { numeric: true });
+  }
+
+  private isTransferredRow(row: Record<string, unknown>): boolean {
+    return this.getRowText(row, 'STATUS').trim().toLocaleLowerCase('pt-BR') === 'transferido';
+  }
+
+  private isTransferredStudent(registration: string, name: string): boolean {
+    return this.tbdaRows.some(row => {
+      const rowRegistration = this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula');
+      const rowName = this.getRowText(row, 'NOME');
+      return (registration && rowRegistration === registration || !registration && name && rowName === name)
+        && this.isTransferredRow(row);
+    });
   }
 
   private findSavedAttendance(room: string, monthName: string, day: string): AttendanceCacheEntry | null {
