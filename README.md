@@ -95,6 +95,16 @@ npm run build
 
 O arquivo `.htaccess` mantém o roteamento do Angular funcionando quando uma rota como `/home` ou `/alunos` é acessada diretamente. A aplicação continua usando o Supabase no navegador, portanto as configurações e políticas do projeto Supabase precisam estar ativas antes do acesso em produção.
 
+### Deploy automático pelo GitHub
+
+O workflow `.github/workflows/deploy-hostinger.yml` compila e envia automaticamente a aplicação a cada push na branch `main`. Para ativá-lo, cadastre em **Settings > Secrets and variables > Actions** do repositório:
+
+- `FTP_SERVER`: servidor FTP exibido em **Websites > Gerenciar > Acesso FTP** na Hostinger
+- `FTP_USERNAME`: usuário FTP
+- `FTP_PASSWORD`: senha FTP
+
+O workflow publica via FTPS em `/public_html/`. Se usar o recurso de Git do hPanel diretamente, configure o deploy para uma pasta que contenha os arquivos já compilados; publicar a raiz do repositório causa erro `403` porque ela não possui o `index.html` de produção.
+
 ## Observações importantes
 
 - O projeto usa Supabase para autenticação e persistência de dados.
