@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.send_attendance_cache(
 )
 RETURNS JSONB
 LANGUAGE plpgsql
-SECURITY DEFINER
+SECURITY DEFINR
 AS $$
 DECLARE
   v_result JSONB := '{"success": 0, "failed": 0, "errors": []}';
