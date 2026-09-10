@@ -32,6 +32,7 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
 })
 export class LoginComponent implements OnInit {
   hidePassword = true;
+  showForgotPassword = false;
   greeting = this.getGreeting();
   loginData = {
     email: '',
@@ -39,6 +40,8 @@ export class LoginComponent implements OnInit {
     remember: true,
   };
   authError: string | null = null;
+  resetMessage: string | null = null;
+  isResetSubmitting = false;
   isSubmitting = false;
 
   constructor(private cdr: ChangeDetectorRef, private router: Router) {}
@@ -127,6 +130,52 @@ export class LoginComponent implements OnInit {
       this.authError = 'Erro inesperado ao conectar. Tente novamente.';
     } finally {
       this.isSubmitting = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  openForgotPassword(event: Event): void {
+    event.preventDefault();
+    this.authError = null;
+    this.resetMessage = null;
+    this.showForgotPassword = true;
+  }
+
+  closeForgotPassword(): void {
+    this.authError = null;
+    this.resetMessage = null;
+    this.showForgotPassword = false;
+  }
+
+  async requestPasswordReset(): Promise<void> {
+    this.authError = null;
+    this.resetMessage = null;
+
+    const email = this.loginData.email.trim();
+    if (!email) {
+      this.authError = 'Informe o e-mail cadastrado para continuar.';
+      return;
+    }
+
+    this.isResetSubmitting = true;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error('Supabase password reset error', error);
+        this.authError = 'Não foi possível enviar o link. Verifique o e-mail e tente novamente.';
+        return;
+      }
+
+      this.resetMessage = 'Link enviado. Verifique a caixa de entrada e a pasta de spam.';
+    } catch (exception) {
+      console.error('Unexpected password reset exception', exception);
+      this.authError = 'Erro inesperado ao enviar o link. Tente novamente.';
+    } finally {
+      this.isResetSubmitting = false;
       this.cdr.detectChanges();
     }
   }

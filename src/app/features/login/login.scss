@@ -69,6 +69,24 @@
   text-decoration: underline;
 }
 
+.reset-intro {
+  margin: 0 0 4px;
+  color: rgba(0, 0, 0, 0.68);
+  line-height: 1.45;
+  text-align: center;
+}
+
+.back-button {
+  margin-top: -6px;
+}
+
+.auth-success {
+  margin-top: 10px;
+  color: #267346;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 .full-width {
   width: 100%;
 }
