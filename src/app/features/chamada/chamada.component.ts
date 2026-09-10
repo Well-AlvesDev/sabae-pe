@@ -255,7 +255,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
           const name = String(student?.name ?? '').trim();
           const registration = String(student?.registration ?? '').trim();
           const isTransferred = student?.status === 'Transferido'
-            || this.isTransferredStudent(registration, name);
+            || (student?.status !== 'P' && this.isTransferredStudent(registration, name));
           return {
             name,
             registration,

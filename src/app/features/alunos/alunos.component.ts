@@ -238,14 +238,19 @@ export class AlunosComponent implements OnInit, OnDestroy {
 
     return Array.from({ length: dayCount }, (_, index) => {
       const day = index + 1;
+      const date = new Date(year, month - 1, day);
+      if (date.getDay() === 0 || date.getDay() === 6) {
+        return null;
+      }
+
       const value = String(row[String(day)] ?? '').toUpperCase();
       const match = value.match(new RegExp(`\\b(P|FNJ|FJ):${month}\\b`));
       return {
         day,
-        weekday: weekdays[new Date(year, month - 1, day).getDay()],
+        weekday: weekdays[date.getDay()],
         status: (match?.[1] as AttendanceDay['status']) || null,
       };
-    });
+    }).filter((day): day is AttendanceDay => day !== null);
   }
 
   private getValue(row: Record<string, unknown>, ...keys: string[]): string {

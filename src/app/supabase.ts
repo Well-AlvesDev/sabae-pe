@@ -748,7 +748,7 @@ export async function updateStudentStatus(
             name: String(updatedStudent['NOME'] ?? updatedStudent['nome'] ?? student.name).trim(),
             room: String(updatedStudent['TURMA'] ?? updatedStudent['turma'] ?? student.room ?? '').trim(),
             shift: String(updatedStudent['TURNO'] ?? updatedStudent['turno'] ?? student.shift ?? '').trim() || student.shift,
-            status,
+            status: status === 'Matriculado' ? 'P' : status,
           }
         : student,
     ),

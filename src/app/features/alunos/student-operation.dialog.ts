@@ -133,10 +133,10 @@ export type StudentOperationDialogData = {
             <mat-list-item class="student-result" (click)="selectStudent(student)" role="button">
               <mat-icon matListItemIcon>person</mat-icon>
               <span matListItemTitle>{{ student.name }}</span>
-              <span matListItemLine>
-                Matrícula: {{ student.registration || 'não informada' }}
-                @if (student.room) { <span> · Turma: {{ student.room }}</span> }
-              </span>
+              <span matListItemLine>Matrícula: {{ student.registration || 'não informada' }}</span>
+              @if (student.room) {
+                <span matListItemLine>Turma: {{ student.room }}</span>
+              }
             </mat-list-item>
           }
         </mat-list>
@@ -366,6 +366,9 @@ type StudentTransferStatusDialogData = {
           <p class="dialog-eyebrow">Atribuir status para:</p>
           <h2 id="status-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+          @if (data.student.room) {
+            <p class="student-meta">Turma: {{ data.student.room }}</p>
+          }
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
           <mat-icon>close</mat-icon>
@@ -471,6 +474,9 @@ type StudentNameDialogData = {
           <p class="dialog-eyebrow">Atribuir nome para:</p>
           <h2 id="name-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+          @if (data.student.room) {
+            <p class="student-meta">Turma: {{ data.student.room }}</p>
+          }
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
           <mat-icon>close</mat-icon>
@@ -656,6 +662,9 @@ export class StudentClassroomDialogComponent {
           <p class="dialog-eyebrow">Atribuir turno para:</p>
           <h2 id="shift-dialog-title">{{ data.student.name }}</h2>
           <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+          @if (data.student.room) {
+            <p class="student-meta">Turma: {{ data.student.room }}</p>
+          }
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
           <mat-icon>close</mat-icon>

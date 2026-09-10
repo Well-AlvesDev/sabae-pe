@@ -85,7 +85,7 @@ export type StudentAttendanceDialogData = {
     .status-dot.present { background: #16a34a; }
     .status-dot.unjustified { background: #dc2626; }
     .status-dot.justified { background: #2563eb; }
-    .day-grid { display: grid; grid-template-columns: repeat(7, minmax(42px, 54px)); justify-content: start; gap: 9px; max-width: 432px; }
+    .day-grid { display: grid; grid-template-columns: repeat(5, minmax(42px, 54px)); justify-content: start; gap: 9px; max-width: 306px; }
     .day-cell { display: flex; width: 54px; aspect-ratio: 1; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 2px solid #cbd5e1; border-radius: 50%; background: #f1f3f5; color: #8993a0; }
     .day-cell strong { font-size: 0.9rem; line-height: 1; }
     .day-cell small { font-size: 0.58rem; font-weight: 700; line-height: 1; }
@@ -96,7 +96,7 @@ export type StudentAttendanceDialogData = {
     .day-cell.justified { border-color: #2563eb; background: #2563eb; color: #fff; }
     @media (max-width: 480px) {
       .attendance-dialog { padding: 18px 14px; }
-      .day-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; max-width: none; }
+      .day-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-width: none; }
       .day-cell { width: 100%; min-width: 0; }
       .day-cell strong { font-size: 0.78rem; }
       .day-cell small { font-size: 0.5rem; }
