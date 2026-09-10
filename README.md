@@ -14,7 +14,7 @@ O sistema foi pensado para ser uma solução digital útil para o ambiente escol
 
 ## Stack atual
 
-- Angular 21
+- Angular 22
 - Angular Material
 - TypeScript
 - Supabase
@@ -80,6 +80,20 @@ npm run build
 ```bash
 npm test
 ```
+
+## Publicar na Hostinger Business
+
+1. Gere a versão de produção:
+
+```bash
+npm run build
+```
+
+2. No Gerenciador de Arquivos da Hostinger, abra a pasta `public_html` do domínio.
+3. Envie **o conteúdo** de `dist/sabae-pe/browser` para `public_html` (incluindo o arquivo `.htaccess`), e não a pasta `browser` como uma subpasta.
+4. Se já existirem arquivos de uma versão anterior, substitua os arquivos gerados pelo build.
+
+O arquivo `.htaccess` mantém o roteamento do Angular funcionando quando uma rota como `/home` ou `/alunos` é acessada diretamente. A aplicação continua usando o Supabase no navegador, portanto as configurações e políticas do projeto Supabase precisam estar ativas antes do acesso em produção.
 
 ## Observações importantes
 
