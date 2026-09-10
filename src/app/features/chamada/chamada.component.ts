@@ -467,7 +467,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       students: Array.isArray(entry.students) ? entry.students.map(student => ({
         name: String(student?.name ?? '').trim(),
         registration: String(student?.registration ?? '').trim(),
-        status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ' ? student.status : null,
+        status: student?.status === 'P' || student?.status === 'FNJ' || student?.status === 'FJ'
+          || student?.status === 'Transferido' || student?.status === 'Matriculado' ? student.status : null,
       })) : [],
     }));
   }

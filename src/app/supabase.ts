@@ -454,6 +454,50 @@ export function updateAttendanceCacheEntry(entry: AttendanceCacheEntryInput): At
   return nextEntries;
 }
 
+export function addStudentAsPresentToAttendanceCache(
+  input: NewStudentInput,
+  refreshedRows: Record<string, unknown>[] = [],
+): AttendanceCacheEntry[] {
+  const classroom = String(input.classroom ?? '').trim();
+  const registration = String(input.registration ?? '').trim();
+  const name = String(input.name ?? '').trim();
+  const shift = String(input.shift ?? '').trim();
+  const currentEntries = getAttendanceCache();
+  const refreshedStudent = refreshedRows.find(row => matchesStudent(row, registration, name));
+  const nextEntries = currentEntries.map(entry => {
+    if (entry.room !== classroom) {
+      return entry;
+    }
+
+    const hasStudent = entry.students.some(student =>
+      (registration && student.registration === registration) || (!registration && student.name === name),
+    );
+    if (hasStudent) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      students: [
+        ...entry.students,
+        {
+          name: String(refreshedStudent?.['NOME'] ?? name).trim(),
+          registration: String(refreshedStudent?.['MAT'] ?? registration).trim(),
+          room: String(refreshedStudent?.['TURMA'] ?? classroom).trim(),
+          shift: String(refreshedStudent?.['TURNO'] ?? shift).trim(),
+          status: 'P' as const,
+        },
+      ],
+    };
+  });
+
+  try {
+    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+  } catch {}
+
+  return nextEntries;
+}
+
 export function getAttendanceCache(): AttendanceCacheEntry[] {
   try {
     const raw = localStorageStore.getItem(ATTENDANCE_CACHE_KEY);
@@ -623,7 +667,16 @@ export async function insertStudent(input: NewStudentInput): Promise<void> {
     throw result.error;
   }
 
+  const attendanceBackfill = await supabase.rpc('backfill_student_attendance', {
+    p_mat: registration,
+    p_turma: classroom,
+  });
+  if (attendanceBackfill.error) {
+    throw attendanceBackfill.error;
+  }
+
   const refreshedRows = await syncTbdaCache();
+  addStudentAsPresentToAttendanceCache({ name, registration, classroom, shift }, refreshedRows);
   refreshAttendanceCacheFromTbda(refreshedRows);
 }
 
@@ -662,7 +715,14 @@ export async function updateStudentStatus(
     throw new Error('Aluno sem matrícula ou nome para atualização.');
   }
 
-  let query = supabase.from(TBDA_TABLE_NAME).update({ STATUS: status });
+  const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabaseWithSessionStorage.auth.getSession(),
+  ]);
+  const useSessionStorage = !!sessionSessionData?.session && !localSessionData?.session;
+  const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
+
+  let query = client.from(TBDA_TABLE_NAME).update({ STATUS: status });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -671,13 +731,11 @@ export async function updateStudentStatus(
     throw result.error;
   }
 
-  const tbdaRows = getTbdaCache();
-  if (tbdaRows) {
-    const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
-    matchingRows.forEach(row => { row['STATUS'] = status; });
-    if (matchingRows.length) {
-      saveTbdaCache(tbdaRows);
-    }
+  // Recarrega do Supabase para confirmar o update e renovar o cache persistido.
+  const refreshedRows = await syncTbdaCache(useSessionStorage);
+  const updatedStudent = refreshedRows.find(row => matchesStudent(row, normalizedRegistration, normalizedName));
+  if (!updatedStudent || String(updatedStudent['STATUS'] ?? '').trim() !== status) {
+    throw new Error('O status não foi confirmado na atualização do Supabase.');
   }
 
   const attendanceEntries = getAttendanceCache();
@@ -685,7 +743,13 @@ export async function updateStudentStatus(
     ...entry,
     students: entry.students.map(student =>
       matchesStudent(student, normalizedRegistration, normalizedName)
-        ? { ...student, status }
+        ? {
+            ...student,
+            name: String(updatedStudent['NOME'] ?? updatedStudent['nome'] ?? student.name).trim(),
+            room: String(updatedStudent['TURMA'] ?? updatedStudent['turma'] ?? student.room ?? '').trim(),
+            shift: String(updatedStudent['TURNO'] ?? updatedStudent['turno'] ?? student.shift ?? '').trim() || student.shift,
+            status,
+          }
         : student,
     ),
   }));
@@ -709,17 +773,16 @@ export async function updateStudentClassroom(
   const tbdaRows = getTbdaCache();
   const attendanceEntries = getAttendanceCache();
   const matchingRows = tbdaRows?.filter(row => matchesStudent(row, normalizedRegistration, normalizedName)) ?? [];
-  const attendanceCells = getClassroomAttendanceCells(tbdaRows ?? [], attendanceEntries, normalizedClassroom);
   const studentRow = matchingRows[0];
-  const attendanceUpdates = studentRow
-    ? Object.fromEntries(
-        attendanceCells
-          .filter(cell => !hasAttendanceForMonth(studentRow[cell.day], cell.month))
-          .map(cell => [cell.day, appendAttendanceCellValue(studentRow[cell.day], 'P', cell.month)]),
-      )
-    : {};
 
-  let query = supabase.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom, ...attendanceUpdates });
+  const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabaseWithSessionStorage.auth.getSession(),
+  ]);
+  const useSessionStorage = !!sessionSessionData?.session && !localSessionData?.session;
+  const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
+
+  let query = client.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -728,51 +791,79 @@ export async function updateStudentClassroom(
     throw result.error;
   }
 
-  const refreshedRows = await syncTbdaCache();
-  const refreshedStudent = refreshedRows.find(row => matchesStudent(row, normalizedRegistration, normalizedName));
-  if (!refreshedStudent) {
-    throw new Error('A alteração foi confirmada, mas o aluno não foi encontrado na atualização do TBDA.');
+  const refreshedResult = normalizedRegistration
+    ? await client.from(TBDA_TABLE_NAME).select(TBDA_SELECT).eq('MAT', normalizedRegistration).maybeSingle()
+    : await client.from(TBDA_TABLE_NAME).select(TBDA_SELECT).eq('NOME', normalizedName).maybeSingle();
+
+  if (refreshedResult.error) {
+    throw refreshedResult.error;
   }
 
-  const updatedEntries = attendanceEntries.map(entry => ({
-    ...entry,
-    students: (() => {
-      let studentFound = false;
-      const students = entry.students.map(student => {
-        if (!matchesStudent(student, normalizedRegistration, normalizedName)) {
-          return student;
-        }
+  const refreshedStudent = refreshedResult.data as unknown as Record<string, unknown> | null;
+  if (!refreshedStudent || String(refreshedStudent['TURMA'] ?? '').trim() !== normalizedClassroom) {
+    throw new Error('A alteração foi confirmada, mas a nova turma não foi retornada pelo Supabase.');
+  }
 
-        studentFound = true;
-        const attendanceMonth = Number.parseInt(normalizeAttendanceMonth(entry.month), 10);
-        const attendanceStatus = entry.room === normalizedClassroom
-          ? getAttendanceStatusForMonth(refreshedStudent[String(entry.day)], attendanceMonth)
-          : null;
+  const cachedRows = getTbdaCache() ?? await syncTbdaCache(useSessionStorage);
+  const cachedStudentFound = cachedRows.some(row => matchesStudent(row, normalizedRegistration, normalizedName));
+  const updatedRows = cachedRows.map(row => matchesStudent(row, normalizedRegistration, normalizedName)
+    ? { ...row, ...refreshedStudent, TURMA: normalizedClassroom }
+    : row);
+  if (!cachedStudentFound) {
+    updatedRows.push({ ...refreshedStudent, TURMA: normalizedClassroom });
+  }
+  saveTbdaCache(updatedRows);
+
+  const oldClassroom = String(studentRow?.['TURMA'] ?? studentRow?.['turma'] ?? '').trim();
+  const studentMatches = (student: AttendanceCacheStudent): boolean =>
+    matchesStudent(student, normalizedRegistration, normalizedName);
+  const previousAttendanceByDate = new Map<string, AttendanceCacheStudent['status']>();
+  attendanceEntries.forEach(entry => {
+    const existingStudent = entry.students.find(studentMatches);
+    if (existingStudent?.status) {
+      previousAttendanceByDate.set(`${entry.month}:${entry.day}`, existingStudent.status);
+    }
+  });
+  const buildUpdatedStudent = (entry: AttendanceCacheEntry, currentStudent?: AttendanceCacheStudent): AttendanceCacheStudent => {
+    const attendanceStatus = previousAttendanceByDate.get(`${entry.month}:${entry.day}`);
+    const isTransferred = String(refreshedStudent['STATUS'] ?? refreshedStudent['status'] ?? '')
+      .trim()
+      .toLocaleLowerCase('pt-BR') === 'transferido';
+    return {
+      name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? currentStudent?.name ?? normalizedName).trim(),
+      registration: String(refreshedStudent['MAT'] ?? refreshedStudent['mat'] ?? currentStudent?.registration ?? normalizedRegistration).trim(),
+      room: normalizedClassroom,
+      shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? currentStudent?.shift ?? '').trim(),
+      status: attendanceStatus ?? currentStudent?.status ?? (isTransferred ? null : 'P'),
+    };
+  };
+
+  const updatedEntries = attendanceEntries
+    .map(entry => {
+      const studentIndex = entry.students.findIndex(studentMatches);
+      const isNewClassroomEntry = entry.room === normalizedClassroom;
+      const isOldClassroomEntry = entry.room === oldClassroom || (!oldClassroom && studentIndex !== -1);
+
+      if (isOldClassroomEntry && !isNewClassroomEntry) {
         return {
-          ...student,
-          name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? student.name).trim(),
-          room: String(refreshedStudent['TURMA'] ?? refreshedStudent['turma'] ?? normalizedClassroom).trim(),
-          shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? student.shift ?? '').trim() || student.shift,
-          status: entry.room === normalizedClassroom
-            ? attendanceStatus ?? student.status ?? 'P'
-            : student.status,
+          ...entry,
+          students: entry.students.filter(student => !studentMatches(student)),
         };
-      });
+      }
 
-      return entry.room === normalizedClassroom && !studentFound
-        ? [...students, {
-            name: String(refreshedStudent['NOME'] ?? refreshedStudent['nome'] ?? normalizedName).trim(),
-            registration: String(refreshedStudent['MAT'] ?? refreshedStudent['mat'] ?? normalizedRegistration).trim(),
-            room: String(refreshedStudent['TURMA'] ?? refreshedStudent['turma'] ?? normalizedClassroom).trim(),
-            shift: String(refreshedStudent['TURNO'] ?? refreshedStudent['turno'] ?? '').trim(),
-            status: getAttendanceStatusForMonth(
-              refreshedStudent[String(entry.day)],
-              Number.parseInt(normalizeAttendanceMonth(entry.month), 10),
-            ) ?? 'P',
-          }]
-        : students;
-    })(),
-  }));
+      if (!isNewClassroomEntry) {
+        return entry;
+      }
+
+      const students = studentIndex === -1
+        ? [...entry.students, buildUpdatedStudent(entry)]
+        : entry.students.map((student, index) => index === studentIndex
+          ? buildUpdatedStudent(entry, student)
+          : student);
+      return { ...entry, students };
+    })
+    .filter(entry => entry.students.length > 0);
+
   try {
     localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
   } catch {}
@@ -926,8 +1017,8 @@ export async function updateStudentName(
 function matchesStudent(row: Record<string, unknown>, registration: string, name: string): boolean {
   const rowRegistration = String(row['MAT'] ?? row['MATRICULA'] ?? row['MATRÍCULA'] ?? row['registration'] ?? '').trim();
   const rowName = String(row['NOME'] ?? row['name'] ?? '').trim();
-  if (registration && rowRegistration) {
-    return rowRegistration === registration;
+  if (registration && rowRegistration && rowRegistration === registration) {
+    return true;
   }
 
   return Boolean(name) && normalizeStudentName(rowName) === normalizeStudentName(name);
