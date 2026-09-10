@@ -166,7 +166,10 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     this.isGeneratingReport = true;
 
     try {
-      const XLSX = await import('xlsx-js-style');
+      const xlsxModule = await import('xlsx-js-style') as typeof import('xlsx-js-style') & {
+        default?: typeof import('xlsx-js-style');
+      };
+      const XLSX = xlsxModule.default ?? xlsxModule;
       const month = normalizeAttendanceMonth(this.selectedMonth);
       const requestedRegistrations = this.getRequestedRegistrations();
       const filteredRows = this.tbdaRows
