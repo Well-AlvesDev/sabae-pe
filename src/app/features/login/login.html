@@ -38,17 +38,28 @@
 
                 <ng-template #loginFields>
                     <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
+                        <mat-label>Módulo de acesso</mat-label>
+                        <mat-select name="accessModule" [(ngModel)]="loginData.accessModule" required>
+                            @for (module of accessModules; track module.table) {
+                            <mat-option [value]="module.table">{{ module.label }}</mat-option>
+                            }
+                        </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
                         <mat-label>E-mail</mat-label>
                         <input matInput type="email" name="email" [(ngModel)]="loginData.email" required
-                            autocomplete="email" />
+                            autocomplete="email" [disabled]="!loginData.accessModule" />
                         <mat-icon matSuffix>email</mat-icon>
                     </mat-form-field>
 
                     <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
                         <mat-label>Senha</mat-label>
                         <input matInput [type]="hidePassword ? 'password' : 'text'" name="password"
-                            [(ngModel)]="loginData.password" required minlength="6" autocomplete="current-password" />
+                            [(ngModel)]="loginData.password" required minlength="6" autocomplete="current-password"
+                            [disabled]="!loginData.accessModule" />
                         <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                            [disabled]="!loginData.accessModule"
                             [attr.aria-label]="hidePassword ? 'Mostrar senha' : 'Ocultar senha'">
                             <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
                         </button>
@@ -71,7 +82,7 @@
                     <div class="auth-error" *ngIf="authError">{{ authError }}</div>
                 </ng-template>
                 <div class="register-link">
-                    <span style="display:block; text-align: center;">Esta área é exclusiva para monitores. O cadastro de
+                    <span style="display:block; text-align: center;font-size: 0.775rem;">Esta área é exclusiva para monitores. O cadastro de
                         novos usuários é feito de forma interna.</span>
                 </div>
             </form>

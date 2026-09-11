@@ -34,25 +34,56 @@ function createSafeStorage(): Storage {
 const localStorageStore = createSafeStorage();
 const sessionStorageStore = createSafeStorage();
 
+export const ACCESS_MODULES = [
+  { label: 'ESCOLA DOM BOSCO', table: 'TBDA' },
+  { label: 'ESCOLA LUIZ IGNACIO', table: 'USINA' },
+] as const;
+
+export type AccessModule = typeof ACCESS_MODULES[number];
+
+const ACTIVE_TABLE_KEY = 'sabae.active-table';
+
+export function setActiveTable(tableName: string): void {
+  const module = ACCESS_MODULES.find(item => item.table === tableName);
+  if (!module) {
+    throw new Error('Módulo de acesso inválido.');
+  }
+
+  localStorageStore.setItem(ACTIVE_TABLE_KEY, module.table);
+}
+
+export function getActiveTable(): string {
+  const storedTable = localStorageStore.getItem(ACTIVE_TABLE_KEY);
+  return ACCESS_MODULES.find(item => item.table === storedTable)?.table
+    ?? ACCESS_MODULES[0].table;
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorageStore,
   },
 });
 
-const TBDA_TABLE_NAME = 'TBDA';
 const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
-const TBDA_CACHE_KEY = 'sabae.tbda.cache';
-const TBDA_LAST_SEARCH_KEY = 'sabae.tbda.last-search';
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TBDA_CACHE_VERSION = 4;
 const TBDA_METADATA_COLUMNS = ['MAT', 'NOME', 'TURMA', 'TURNO', 'STATUS'];
-export const ATTENDANCE_CACHE_KEY = 'sabae.attendance.cache';
+function getAttendanceCacheKey(): string {
+  return `sabae.attendance.cache.${getActiveTable()}`;
+}
 const TBDA_SELECT = [
   ...TBDA_METADATA_COLUMNS.map((column) => `"${column}"`),
   ...TBDA_COLUMNS.map((column) => `"${column}"`),
 ].join(',');
-let tbdaCacheSyncPromise: Promise<Record<string, unknown>[]> | null = null;
+const tbdaCacheSyncPromises = new Map<string, Promise<Record<string, unknown>[]>>();
+
+function getTbdaCacheKey(): string {
+  return `sabae.tbda.cache.${getActiveTable()}`;
+}
+
+function getTbdaLastSearchKey(): string {
+  return `sabae.tbda.last-search.${getActiveTable()}`;
+}
 
 type TbdaCachePayload = {
   version: number;
@@ -72,14 +103,14 @@ function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
 export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
   const formatted = formatSaoPauloDateTime(value);
   try {
-    localStorageStore.setItem(TBDA_LAST_SEARCH_KEY, formatted);
+    localStorageStore.setItem(getTbdaLastSearchKey(), formatted);
   } catch {}
   return formatted;
 }
 
 export function getTbdaLastSearchLabel(): string {
   try {
-    return localStorageStore.getItem(TBDA_LAST_SEARCH_KEY) || '';
+    return localStorageStore.getItem(getTbdaLastSearchKey()) || '';
   } catch {
     return '';
   }
@@ -91,7 +122,7 @@ export async function syncTbdaCache(
 ): Promise<Record<string, unknown>[]> {
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
   const result = await client
-    .from(TBDA_TABLE_NAME)
+    .from(getActiveTable())
     .select(TBDA_SELECT);
 
   if (result.error) {
@@ -114,7 +145,7 @@ export async function syncTbdaCache(
   };
 
   try {
-    localStorageStore.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+    localStorageStore.setItem(getTbdaCacheKey(), JSON.stringify(payload));
   } catch {}
   setTbdaLastSearchLabel(requestedAt);
   return rows;
@@ -126,13 +157,17 @@ export async function ensureTbdaCache(useSessionStorage = false): Promise<Record
     return cachedRows;
   }
 
-  if (!tbdaCacheSyncPromise) {
-    tbdaCacheSyncPromise = syncTbdaCache(useSessionStorage).finally(() => {
-      tbdaCacheSyncPromise = null;
-    });
+  const tableName = getActiveTable();
+  const cachedSyncPromise = tbdaCacheSyncPromises.get(tableName);
+  if (cachedSyncPromise) {
+    return cachedSyncPromise;
   }
 
-  return tbdaCacheSyncPromise;
+  const syncPromise = syncTbdaCache(useSessionStorage).finally(() => {
+    tbdaCacheSyncPromises.delete(tableName);
+  });
+  tbdaCacheSyncPromises.set(tableName, syncPromise);
+  return syncPromise;
 }
 
 export type AttendanceCacheStatus = 'P' | 'FNJ' | 'FJ' | 'Transferido' | 'Matriculado';
@@ -325,6 +360,7 @@ export async function sendAttendanceCacheToTbda(
 
     const rpcResult = await supabase.rpc('send_attendance_cache', {
       attendance_data: attendancePayload,
+      table_name: getActiveTable(),
     });
 
     await new Promise(resolve => setTimeout(resolve, 120));
@@ -435,7 +471,7 @@ export function saveAttendanceCacheEntry(entry: AttendanceCacheEntryInput): Atte
   const nextEntries = replaceDuplicateAttendanceEntry(currentEntries, normalizedEntry);
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -448,7 +484,7 @@ export function updateAttendanceCacheEntry(entry: AttendanceCacheEntryInput): At
   const nextEntries = replaceDuplicateAttendanceEntry(deduplicatedEntries, normalizedEntry);
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -492,7 +528,7 @@ export function addStudentAsPresentToAttendanceCache(
   });
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -500,14 +536,14 @@ export function addStudentAsPresentToAttendanceCache(
 
 export function getAttendanceCache(): AttendanceCacheEntry[] {
   try {
-    const raw = localStorageStore.getItem(ATTENDANCE_CACHE_KEY);
+    const raw = localStorageStore.getItem(getAttendanceCacheKey());
     if (!raw) {
       return [];
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
-      localStorageStore.removeItem(ATTENDANCE_CACHE_KEY);
+      localStorageStore.removeItem(getAttendanceCacheKey());
       return [];
     }
 
@@ -548,14 +584,14 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
 
     if (normalizedEntries.length !== parsed.length) {
       try {
-        localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(normalizedEntries));
+        localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(normalizedEntries));
       } catch {}
     }
 
     return normalizedEntries;
   } catch {
     try {
-      localStorageStore.removeItem(ATTENDANCE_CACHE_KEY);
+      localStorageStore.removeItem(getAttendanceCacheKey());
     } catch {}
     return [];
   }
@@ -566,7 +602,7 @@ export function removeAttendanceCacheEntry(savedAt: number): AttendanceCacheEntr
   const nextEntries = currentEntries.filter(entry => Number(entry.savedAt) !== Number(savedAt));
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(nextEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(nextEntries));
   } catch {}
 
   return nextEntries;
@@ -602,7 +638,7 @@ export function getTbdaShifts(rows: Record<string, unknown>[] | null = getTbdaCa
 
 export function getTbdaCache(): Record<string, unknown>[] | null {
   try {
-    const raw = localStorageStore.getItem(TBDA_CACHE_KEY);
+    const raw = localStorageStore.getItem(getTbdaCacheKey());
     if (!raw) {
       return null;
     }
@@ -611,13 +647,13 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
     if (parsed && typeof parsed === 'object' && Array.isArray((parsed as TbdaCachePayload).data)) {
       const cachePayload = parsed as TbdaCachePayload;
       if (cachePayload.version !== TBDA_CACHE_VERSION) {
-        localStorageStore.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(getTbdaCacheKey());
         return null;
       }
 
       const cacheAge = Date.now() - Number(cachePayload.timestamp || 0);
       if (cacheAge > TBDA_CACHE_TTL_MS) {
-        localStorageStore.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(getTbdaCacheKey());
         return null;
       }
 
@@ -625,7 +661,7 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
         TBDA_METADATA_COLUMNS.every(column => Object.prototype.hasOwnProperty.call(row, column)),
       );
       if (!hasMetadata) {
-        localStorageStore.removeItem(TBDA_CACHE_KEY);
+        localStorageStore.removeItem(getTbdaCacheKey());
         return null;
       }
 
@@ -636,6 +672,12 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
   } catch {
     return null;
   }
+}
+
+export function clearTbdaCache(): void {
+  try {
+    localStorageStore.removeItem(getTbdaCacheKey());
+  } catch {}
 }
 
 export type StudentAdministrativeStatus = 'Transferido' | 'Matriculado';
@@ -658,7 +700,7 @@ export async function insertStudent(input: NewStudentInput): Promise<void> {
   }
 
   const result = await supabase
-    .from(TBDA_TABLE_NAME)
+    .from(getActiveTable())
     .insert({ MAT: registration, NOME: name, TURMA: classroom, TURNO: shift, STATUS: 'Matriculado' })
     .select(TBDA_SELECT)
     .single();
@@ -670,6 +712,7 @@ export async function insertStudent(input: NewStudentInput): Promise<void> {
   const attendanceBackfill = await supabase.rpc('backfill_student_attendance', {
     p_mat: registration,
     p_turma: classroom,
+    p_table_name: getActiveTable(),
   });
   if (attendanceBackfill.error) {
     throw attendanceBackfill.error;
@@ -700,7 +743,7 @@ function refreshAttendanceCacheFromTbda(rows: Record<string, unknown>[]): void {
   }));
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(updatedEntries));
   } catch {}
 }
 
@@ -722,7 +765,7 @@ export async function updateStudentStatus(
   const useSessionStorage = !!sessionSessionData?.session && !localSessionData?.session;
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
 
-  let query = client.from(TBDA_TABLE_NAME).update({ STATUS: status });
+  let query = client.from(getActiveTable()).update({ STATUS: status });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -754,7 +797,7 @@ export async function updateStudentStatus(
     ),
   }));
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(updatedEntries));
   } catch {}
 }
 
@@ -782,7 +825,7 @@ export async function updateStudentClassroom(
   const useSessionStorage = !!sessionSessionData?.session && !localSessionData?.session;
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
 
-  let query = client.from(TBDA_TABLE_NAME).update({ TURMA: normalizedClassroom });
+  let query = client.from(getActiveTable()).update({ TURMA: normalizedClassroom });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -792,8 +835,8 @@ export async function updateStudentClassroom(
   }
 
   const refreshedResult = normalizedRegistration
-    ? await client.from(TBDA_TABLE_NAME).select(TBDA_SELECT).eq('MAT', normalizedRegistration).maybeSingle()
-    : await client.from(TBDA_TABLE_NAME).select(TBDA_SELECT).eq('NOME', normalizedName).maybeSingle();
+    ? await client.from(getActiveTable()).select(TBDA_SELECT).eq('MAT', normalizedRegistration).maybeSingle()
+    : await client.from(getActiveTable()).select(TBDA_SELECT).eq('NOME', normalizedName).maybeSingle();
 
   if (refreshedResult.error) {
     throw refreshedResult.error;
@@ -865,7 +908,7 @@ export async function updateStudentClassroom(
     .filter(entry => entry.students.length > 0);
 
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(updatedEntries));
   } catch {}
 }
 
@@ -938,7 +981,7 @@ export async function updateStudentShift(
     throw new Error('Dados insuficientes para atualizar o turno.');
   }
 
-  let query = supabase.from(TBDA_TABLE_NAME).update({ TURNO: normalizedShift });
+  let query = supabase.from(getActiveTable()).update({ TURNO: normalizedShift });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedName);
@@ -966,7 +1009,7 @@ export async function updateStudentShift(
     ),
   }));
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(updatedEntries));
   } catch {}
 }
 
@@ -982,7 +1025,7 @@ export async function updateStudentName(
     throw new Error('Dados insuficientes para atualizar o nome.');
   }
 
-  let query = supabase.from(TBDA_TABLE_NAME).update({ NOME: normalizedNewName });
+  let query = supabase.from(getActiveTable()).update({ NOME: normalizedNewName });
   const result = normalizedRegistration
     ? await query.eq('MAT', normalizedRegistration)
     : await query.eq('NOME', normalizedCurrentName);
@@ -1010,7 +1053,7 @@ export async function updateStudentName(
     ),
   }));
   try {
-    localStorageStore.setItem(ATTENDANCE_CACHE_KEY, JSON.stringify(updatedEntries));
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(updatedEntries));
   } catch {}
 }
 
@@ -1035,7 +1078,7 @@ function saveTbdaCache(rows: Record<string, unknown>[]): void {
     data: rows,
   };
   try {
-    localStorageStore.setItem(TBDA_CACHE_KEY, JSON.stringify(payload));
+    localStorageStore.setItem(getTbdaCacheKey(), JSON.stringify(payload));
   } catch {}
 }
 

@@ -12,6 +12,7 @@ import {
   ensureTbdaCache,
   getAttendanceCache,
   getTbdaClassrooms,
+  getTbdaShifts,
   normalizeAttendanceMonth,
   supabase,
   supabaseWithSessionStorage,
@@ -32,7 +33,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
   ];
-  public readonly shifts = ['Manhã', 'Tarde', 'Noite'];
+  public shifts: string[] = [];
   public readonly days = Array.from({ length: 31 }, (_, index) => String(index + 1));
   public selectedMonth = '';
   public selectedShift = '';
@@ -78,6 +79,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
       const rows = await ensureTbdaCache(useSessionStorage);
       this.tbdaRows = rows;
       this.rooms = getTbdaClassrooms(rows);
+      this.shifts = getTbdaShifts(rows);
     } catch (error) {
       console.error('[planilhas] failed to load spreadsheet data', error);
     } finally {
@@ -115,6 +117,13 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
 
   public clearRegistrations(): void {
     this.registrations = '';
+  }
+
+  public onShiftChange(shift: string): void {
+    this.selectedShift = shift;
+    this.selectedRoom = '';
+    const rowsForShift = this.tbdaRows.filter(row => this.matchesShift(this.getRowText(row, 'TURNO'), shift));
+    this.rooms = getTbdaClassrooms(rowsForShift);
   }
 
   public goToHome(): void {

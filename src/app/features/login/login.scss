@@ -1,9 +1,9 @@
 .login-shell {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 18px 16px;
+  padding: 32px 16px 18px;
   
 }
 
@@ -13,7 +13,6 @@
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0), 0 8px 16px rgba(0, 0, 0, 0);
   overflow: hidden;
-  top: -60px;
 }
 
 .login-card mat-card-header {
@@ -175,7 +174,7 @@ mat-checkbox {
 
 @media (max-width: 400px) {
   .login-shell {
-    padding: 14px 10px;
+    padding: 32px 10px 14px;
   }
 
   .login-card {

@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
+  clearTbdaCache,
   ensureTbdaCache,
   getTbdaLastSearchLabel,
   setTbdaLastSearchLabel,
@@ -552,9 +553,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.isRefreshingAttendance = true;
     this.isLoadingAttendanceScore = true;
     try {
-      try {
-        localStorage.removeItem('sabae.tbda.cache');
-      } catch {}
+      clearTbdaCache();
 
       const [{ data: localData }, { data: sessionData }] = await Promise.all([
         supabase.auth.getUser(),

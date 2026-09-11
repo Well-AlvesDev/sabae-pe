@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule, NgIf, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -9,7 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { supabase, supabaseWithSessionStorage } from '../../supabase';
+import { MatSelectModule } from '@angular/material/select';
+import { ACCESS_MODULES, setActiveTable, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-login',
@@ -26,17 +27,20 @@ import { supabase, supabaseWithSessionStorage } from '../../supabase';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
   ],
   templateUrl: './login.html',
   styleUrls: ['./login.scss'],
 })
 export class LoginComponent implements OnInit {
+  readonly accessModules = ACCESS_MODULES;
   hidePassword = true;
   showForgotPassword = false;
   greeting = this.getGreeting();
   loginData = {
     email: '',
     password: '',
+    accessModule: '',
     remember: true,
   };
   authError: string | null = null;
@@ -44,7 +48,11 @@ export class LoginComponent implements OnInit {
   isResetSubmitting = false;
   isSubmitting = false;
 
-  constructor(private cdr: ChangeDetectorRef, private router: Router) {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
+  ) {}
 
   private getGreeting(): string {
     const hour = new Date().getHours();
@@ -61,6 +69,12 @@ export class LoginComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    const accessDenied = this.activatedRoute.snapshot.queryParamMap.get('accessDenied') === 'true';
+    if (accessDenied) {
+      this.authError = 'Este módulo de acesso não pertence a este usuário.';
+      return;
+    }
+
     const [{ data: localData }, { data: sessionData }] = await Promise.all([
       supabase.auth.getSession(),
       supabaseWithSessionStorage.auth.getSession(),
@@ -75,6 +89,14 @@ export class LoginComponent implements OnInit {
 
   async submit(): Promise<void> {
     this.authError = null;
+
+    if (!this.loginData.accessModule) {
+      this.authError = 'Selecione o módulo de acesso para continuar.';
+      return;
+    }
+
+    setActiveTable(this.loginData.accessModule);
+
     this.isSubmitting = true;
 
     const client = this.loginData.remember
@@ -122,6 +144,16 @@ export class LoginComponent implements OnInit {
           // eslint-disable-next-line no-await-in-loop
           await new Promise((r) => setTimeout(r, 300));
         }
+      }
+
+      const { data: hasAccess, error: accessError } = await client.rpc('tem_acesso', {
+        nome_tabela: this.loginData.accessModule,
+      });
+
+      if (accessError || hasAccess !== true) {
+        await client.auth.signOut();
+        this.authError = 'Este módulo de acesso não pertence a este usuário.';
+        return;
       }
 
       this.router.navigateByUrl('/home');

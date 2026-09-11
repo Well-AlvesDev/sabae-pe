@@ -26,9 +26,9 @@ import { supabase } from '../../supabase';
   ],
   template: `
     <div class="reset-shell">
+      <img class="reset-logo" ngSrc="sabae-max2.webp" width="200" height="67" priority alt="SABAE-PE Logo" />
       <mat-card class="reset-card">
         <mat-card-header>
-          <img class="reset-logo" ngSrc="sabae-max2.webp" width="200" height="67" priority alt="SABAE-PE Logo" />
           <mat-card-title>Redefinir senha</mat-card-title>
           <mat-card-subtitle>Escolha uma nova senha para sua conta.</mat-card-subtitle>
         </mat-card-header>
@@ -71,10 +71,10 @@ import { supabase } from '../../supabase';
     </div>
   `,
   styles: [`
-    .reset-shell { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 18px 16px; }
+    .reset-shell { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 32px 16px 18px; }
+    .reset-logo { display: block; width: 200px; height: auto; margin: 0 auto 16px; }
     .reset-card { width: min(420px, 100%); padding: 24px 20px; }
     .reset-card mat-card-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 0 18px; }
-    .reset-logo { display: block; width: 200px; height: auto; margin: 0 auto 20px; }
     .reset-form { display: grid; gap: 14px; }
     .full-width { width: 100%; }
     .submit-button { min-height: 44px; }

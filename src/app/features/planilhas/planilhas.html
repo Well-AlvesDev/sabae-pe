@@ -90,7 +90,8 @@
         <div class="field-group">
             <mat-form-field class="material-select" appearance="outline">
                 <mat-label>Selecione o turno</mat-label>
-                <mat-select [(ngModel)]="selectedShift" aria-label="Selecione o turno">
+                <mat-select [(ngModel)]="selectedShift" (ngModelChange)="onShiftChange($event)"
+                    aria-label="Selecione o turno">
                     <mat-option *ngFor="let shift of shifts" [value]="shift">{{ shift }}</mat-option>
                 </mat-select>
             </mat-form-field>
@@ -100,6 +101,7 @@
             <mat-form-field class="material-select" appearance="outline">
                 <mat-label>Selecione a turma (opcional)</mat-label>
                 <mat-select [(ngModel)]="selectedRoom" aria-label="Selecione a turma (opcional)">
+                    <mat-option value="">Todas as turmas</mat-option>
                     <mat-option *ngFor="let room of rooms" [value]="room">{{ room }}</mat-option>
                 </mat-select>
             </mat-form-field>
