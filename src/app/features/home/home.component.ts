@@ -10,6 +10,7 @@ import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   clearTbdaCache,
   ensureTbdaCache,
+  getActiveModuleLabel,
   getTbdaLastSearchLabel,
   setTbdaLastSearchLabel,
   syncTbdaCache,
@@ -25,6 +26,7 @@ import {
   styleUrls: ['./home.scss', './home-classroom.scss', './home-summary.scss', './home-monthly.scss'],
 })
 export class HomeComponent implements OnInit, OnDestroy {
+  public readonly schoolName = getActiveModuleLabel();
   public userName: string = 'usuário';
   public userEmail: string = 'Obtendo usuário...';
   public avatarInitial: string = 'U';

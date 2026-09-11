@@ -12,6 +12,7 @@ import { AttendanceDeleteConfirmDialogComponent, AttendanceDuplicateWarningDialo
 import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
+  getActiveModuleLabel,
   getAttendanceCache,
   getAttendanceRegistrationPayloadsForEntry,
   getTbdaClassrooms,
@@ -47,6 +48,7 @@ type StudentAttendance = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChamadaComponent implements OnInit, OnDestroy {
+  public readonly schoolName = getActiveModuleLabel();
   public isMenuOpen = false;
   private readonly today = new Date();
   public readonly months = [

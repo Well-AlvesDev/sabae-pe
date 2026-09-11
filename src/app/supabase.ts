@@ -58,6 +58,12 @@ export function getActiveTable(): string {
     ?? ACCESS_MODULES[0].table;
 }
 
+export function getActiveModuleLabel(): string {
+  const activeTable = getActiveTable();
+  return ACCESS_MODULES.find(item => item.table === activeTable)?.label
+    ?? ACCESS_MODULES[0].label;
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorageStore,

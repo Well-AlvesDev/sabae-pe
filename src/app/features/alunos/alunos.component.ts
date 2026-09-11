@@ -8,7 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { ensureTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { ensureTbdaCache, getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 import { type StudentOperation } from './student-operation.dialog';
 
@@ -31,6 +31,7 @@ type StudentAbsence = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AlunosComponent implements OnInit, OnDestroy {
+  public readonly schoolName = getActiveModuleLabel();
   public readonly months = [
     { value: '1', label: 'Janeiro' },
     { value: '2', label: 'Fevereiro' },

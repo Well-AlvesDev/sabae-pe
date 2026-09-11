@@ -10,6 +10,7 @@ import type { User } from '@supabase/supabase-js';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
+  getActiveModuleLabel,
   getAttendanceCache,
   getTbdaClassrooms,
   getTbdaShifts,
@@ -29,6 +30,7 @@ type ReportRow = Record<string, string>;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlanilhasComponent implements OnInit, OnDestroy {
+  public readonly schoolName = getActiveModuleLabel();
   public readonly months = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
