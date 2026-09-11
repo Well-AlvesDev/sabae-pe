@@ -35,7 +35,7 @@ const localStorageStore = createSafeStorage();
 const sessionStorageStore = createSafeStorage();
 
 export const ACCESS_MODULES = [
-  { label: 'ESCOLA DOM BOSCO', table: 'TBDA' },
+  { label: 'ESCOLA DOM BOSCO', table: 'DOMBOSCO' },
   { label: 'ESCOLA LUIZ IGNACIO', table: 'USINA' },
 ] as const;
 

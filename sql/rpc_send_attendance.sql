@@ -43,8 +43,14 @@ DECLARE
   v_new_value TEXT;
   v_update_result INT;
 BEGIN
-  IF table_name NOT IN ('TBDA', 'USINA') THEN
-    RAISE EXCEPTION 'Tabela de acesso inválida: %', table_name;
+  table_name := btrim(table_name);
+
+  IF table_name IS NULL OR table_name = '' OR table_name !~ '^[A-Za-z_][A-Za-z0-9_]*$' THEN
+    RAISE EXCEPTION 'Nome de tabela inválido: %', table_name;
+  END IF;
+
+  IF to_regclass(format('public.%I', table_name)) IS NULL THEN
+    RAISE EXCEPTION 'Tabela não encontrada no schema public: %', table_name;
   END IF;
 
   -- Validação de entrada
@@ -88,7 +94,7 @@ BEGIN
 
     -- Buscar valor existente
     EXECUTE format(
-      'SELECT COALESCE(NULLIF(%I::TEXT, ''''), '''') FROM %I WHERE TRIM("MAT"::TEXT) = $1 LIMIT 1',
+      'SELECT COALESCE(NULLIF(%I::TEXT, ''''), '''') FROM public.%I WHERE TRIM("MAT"::TEXT) = $1 LIMIT 1',
       v_day_column,
       table_name
     ) INTO v_existing_value USING v_mat;
@@ -116,7 +122,7 @@ BEGIN
 
     -- Executar update
     EXECUTE format(
-      'UPDATE %I SET %I = $1 WHERE TRIM("MAT"::TEXT) = $2',
+      'UPDATE public.%I SET %I = $1 WHERE TRIM("MAT"::TEXT) = $2',
       table_name,
       v_day_column
     ) USING v_new_value, v_mat;
@@ -163,14 +169,20 @@ DECLARE
   v_new_value TEXT;
   v_updated_days INT := 0;
 BEGIN
-  IF p_table_name NOT IN ('TBDA', 'USINA') THEN
-    RAISE EXCEPTION 'Tabela de acesso inválida: %', p_table_name;
+  p_table_name := btrim(p_table_name);
+
+  IF p_table_name IS NULL OR p_table_name = '' OR p_table_name !~ '^[A-Za-z_][A-Za-z0-9_]*$' THEN
+    RAISE EXCEPTION 'Nome de tabela inválido: %', p_table_name;
+  END IF;
+
+  IF to_regclass(format('public.%I', p_table_name)) IS NULL THEN
+    RAISE EXCEPTION 'Tabela não encontrada no schema public: %', p_table_name;
   END IF;
 
   FOR v_day IN 1..31 LOOP
     EXECUTE format(
       'SELECT string_agg(DISTINCT matches[1], '','' ORDER BY matches[1])
-       FROM %I source_row
+       FROM public.%I source_row
        CROSS JOIN LATERAL regexp_matches(
          COALESCE(source_row.%I::TEXT, ''''),
          ''(?:P|FNJ|FJ):([0-9]{1,2})'',
@@ -188,7 +200,7 @@ BEGIN
       FROM unnest(string_to_array(v_months, ',')) AS month_values(month_value);
 
       EXECUTE format(
-        'UPDATE %I SET %I = $1 WHERE TRIM("MAT"::TEXT) = TRIM($2)',
+        'UPDATE public.%I SET %I = $1 WHERE TRIM("MAT"::TEXT) = TRIM($2)',
         p_table_name,
         v_day
       ) USING v_new_value, p_mat;
@@ -207,7 +219,7 @@ GRANT EXECUTE ON FUNCTION public.backfill_student_attendance(TEXT, TEXT, TEXT) T
 --   'FJ:8, FNJ:'  -> 'FJ:8'
 --   'FNJ:4, FNJ:4' -> 'FNJ:4'
 --   'P:3, FJ:3' -> 'P:3, FJ:3' (mesmo mes, mas status diferente: preserva ambos)
-CREATE OR REPLACE FUNCTION public.normalize_tbda_attendance_value(
+CREATE OR REPLACE FUNCTION public.normalize_attendance_value(
   p_value TEXT
 )
 RETURNS TEXT
@@ -244,18 +256,23 @@ BEGIN
 END;
 $$;
 
--- Corrige os dados que ja estao gravados nas tabelas configuradas.
+-- Corrige os dados ja gravados nas tabelas configuradas.
 DO $$
 DECLARE
   v_day INT;
   v_table_name TEXT;
 BEGIN
-  FOREACH v_table_name IN ARRAY ARRAY['TBDA', 'USINA'] LOOP
+  FOR v_table_name IN
+    SELECT DISTINCT tabela_nome
+    FROM public.permissoes
+    WHERE tabela_nome ~ '^[A-Za-z_][A-Za-z0-9_]*$'
+      AND to_regclass(format('public.%I', tabela_nome)) IS NOT NULL
+  LOOP
     FOR v_day IN 1..31 LOOP
       EXECUTE format(
-        'UPDATE %I SET %I = public.normalize_tbda_attendance_value(%I::TEXT)
+        'UPDATE public.%I SET %I = public.normalize_attendance_value(%I::TEXT)
          WHERE %I IS NOT NULL
-           AND %I::TEXT IS DISTINCT FROM public.normalize_tbda_attendance_value(%I::TEXT)',
+           AND %I::TEXT IS DISTINCT FROM public.normalize_attendance_value(%I::TEXT)',
         v_table_name, v_day, v_day, v_day, v_day, v_day
       );
     END LOOP;
@@ -264,7 +281,7 @@ END;
 $$;
 
 -- Normaliza automaticamente novos INSERTs e UPDATEs.
-CREATE OR REPLACE FUNCTION public.normalize_tbda_attendance_columns()
+CREATE OR REPLACE FUNCTION public.normalize_attendance_columns()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
@@ -276,7 +293,7 @@ BEGIN
       NEW,
       jsonb_build_object(
         v_day::TEXT,
-        public.normalize_tbda_attendance_value(to_jsonb(NEW)->>v_day::TEXT)
+        public.normalize_attendance_value(to_jsonb(NEW)->>v_day::TEXT)
       )
     );
   END LOOP;
@@ -285,17 +302,26 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS normalize_tbda_attendance_columns_trigger ON "TBDA";
-CREATE TRIGGER normalize_tbda_attendance_columns_trigger
-BEFORE INSERT OR UPDATE ON "TBDA"
-FOR EACH ROW
-EXECUTE FUNCTION public.normalize_tbda_attendance_columns();
+DO $$
+DECLARE
+  v_table_name TEXT;
+BEGIN
+  FOR v_table_name IN
+    SELECT DISTINCT tabela_nome
+    FROM public.permissoes
+    WHERE tabela_nome ~ '^[A-Za-z_][A-Za-z0-9_]*$'
+      AND to_regclass(format('public.%I', tabela_nome)) IS NOT NULL
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS normalize_attendance_columns_trigger ON public.%I', v_table_name);
+    EXECUTE format(
+      'CREATE TRIGGER normalize_attendance_columns_trigger
+       BEFORE INSERT OR UPDATE ON public.%I
+       FOR EACH ROW
+       EXECUTE FUNCTION public.normalize_attendance_columns()',
+      v_table_name
+    );
+  END LOOP;
+END;
+$$;
 
-DROP TRIGGER IF EXISTS normalize_tbdc_attendance_columns_trigger ON "USINA";
-DROP TRIGGER IF EXISTS normalize_usina_attendance_columns_trigger ON "USINA";
-CREATE TRIGGER normalize_usina_attendance_columns_trigger
-BEFORE INSERT OR UPDATE ON "USINA"
-FOR EACH ROW
-EXECUTE FUNCTION public.normalize_tbda_attendance_columns();
-
-GRANT EXECUTE ON FUNCTION public.normalize_tbda_attendance_value(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.normalize_attendance_value(TEXT) TO authenticated;
