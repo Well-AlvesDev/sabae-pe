@@ -48,7 +48,8 @@ export type StudentOperationDialogData = {
     <section class="operation-dialog" aria-labelledby="operation-dialog-title">
       <header class="dialog-header">
         <div>
-          <p class="dialog-eyebrow">Operar aluno</p>
+          <p class="dialog-eyebrow" [class.operation-alter]="data.operation.startsWith('Alterar')"
+            [class.operation-add]="data.operation.startsWith('Adicionar')">Operar aluno</p>
           <h2 id="operation-dialog-title">{{ data.operation }}</h2>
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
@@ -162,6 +163,8 @@ export type StudentOperationDialogData = {
     .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
     .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     .dialog-eyebrow { margin: 0 0 4px; color: #34b447; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .dialog-eyebrow.operation-alter { color: #e8b80a; }
+    .dialog-eyebrow.operation-add { color: #34b447; }
     h2 { margin: 0; color: #0c365c; font-size: 1.3rem; line-height: 1.25; }
     .search-field { display: block; width: 100%; }
     .student-registration-form { display: flex; flex-direction: column; gap: 8px; }
