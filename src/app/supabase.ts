@@ -686,6 +686,24 @@ export function clearTbdaCache(): void {
   } catch {}
 }
 
+export function clearPersistentCache(): void {
+  try {
+    localStorageStore.removeItem(ACTIVE_TABLE_KEY);
+  } catch {}
+
+  for (const module of ACCESS_MODULES) {
+    for (const key of [
+      `sabae.tbda.cache.${module.table}`,
+      `sabae.attendance.cache.${module.table}`,
+      `sabae.tbda.last-search.${module.table}`,
+    ]) {
+      try {
+        localStorageStore.removeItem(key);
+      } catch {}
+    }
+  }
+}
+
 export type StudentAdministrativeStatus = 'Transferido' | 'Matriculado';
 
 export type NewStudentInput = {

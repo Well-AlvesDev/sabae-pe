@@ -5,7 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { supabase, supabaseWithSessionStorage } from '../../supabase';
+import { clearPersistentCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-logout-confirm-dialog',
@@ -132,6 +132,7 @@ export class LogoutConfirmDialogComponent {
     }
     try { localStorage.removeItem('supabase.auth.token'); } catch {}
     try { sessionStorage.removeItem('supabase.auth.token'); } catch {}
+    clearPersistentCache();
 
     // navigate after a short delay to allow UI to update
     setTimeout(() => {

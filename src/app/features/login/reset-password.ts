@@ -1,7 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CommonModule, NgIf, NgOptimizedImage } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,18 +29,12 @@ import { supabase } from '../../supabase';
       <img class="reset-logo" ngSrc="sabae-max2.webp" width="200" height="67" priority alt="SABAE-PE Logo" />
       <mat-card class="reset-card">
         <mat-card-header>
-          <mat-card-title>Redefinir senha</mat-card-title>
-          <mat-card-subtitle>Escolha uma nova senha para sua conta.</mat-card-subtitle>
+          <h1 class="reset-title">Redefinir senha</h1>
+          <mat-card-subtitle>Escolha uma nova senha para <strong class="account-email">{{ accountEmail || 'sua conta'
+              }}</strong>.</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <form class="reset-form" (ngSubmit)="updatePassword()" #passwordForm="ngForm">
-            <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
-              <mat-label>Conta</mat-label>
-              <input matInput type="email" name="accountEmail" [value]="accountEmail || 'Carregando...'"
-                readonly autocomplete="username" />
-              <mat-icon matSuffix>email</mat-icon>
-              <mat-hint>Esta é a conta que terá a senha alterada.</mat-hint>
-            </mat-form-field>
             <mat-form-field appearance="outline" class="full-width" hideRequiredMarker>
               <mat-label>Nova senha</mat-label>
               <input matInput [type]="hidePassword ? 'password' : 'text'" name="password"
@@ -74,7 +68,10 @@ import { supabase } from '../../supabase';
     .reset-shell { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 32px 16px 18px; }
     .reset-logo { display: block; width: 200px; height: auto; margin: 0 auto 16px; }
     .reset-card { width: min(420px, 100%); padding: 24px 20px; }
-    .reset-card mat-card-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 0 18px; }
+    .reset-card mat-card-header { display: flex !important; flex-direction: column !important; align-items: center; text-align: center; padding: 0 0 18px; }
+    .reset-card mat-card-header > .reset-title { order: -1 !important; margin: 0 0 12px; font-size: 1.5rem; line-height: 1.25; }
+    .reset-card mat-card-header > mat-card-subtitle { order: 0 !important; }
+    .account-email { color: #0f4d91; font-weight: 700; }
     .reset-form { display: grid; gap: 14px; }
     .full-width { width: 100%; }
     .submit-button { min-height: 44px; }
@@ -93,9 +90,23 @@ export class ResetPasswordComponent implements OnInit {
   errorMessage: string | null = null;
   successMessage: string | null = null;
 
-  constructor(private cdr: ChangeDetectorRef, private router: Router) {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
+  ) {}
+
+  private get isDevelopmentRoute(): boolean {
+    return this.activatedRoute.snapshot.data['developmentOnly'] === true;
+  }
 
   async ngOnInit(): Promise<void> {
+    if (this.isDevelopmentRoute) {
+      this.accountEmail = 'usuario@desenvolvimento.local';
+      this.cdr.detectChanges();
+      return;
+    }
+
     const { data, error } = await supabase.auth.getUser();
 
     if (error || !data.user?.email) {
@@ -126,7 +137,11 @@ export class ResetPasswordComponent implements OnInit {
       }
 
       this.successMessage = 'Senha atualizada com sucesso. Redirecionando para o login...';
-      setTimeout(() => this.router.navigateByUrl('/login'), 1200);
+      if (!this.isDevelopmentRoute) {
+        setTimeout(() => this.router.navigateByUrl('/login'), 1200);
+      } else {
+        this.successMessage = 'Senha atualizada com sucesso.';
+      }
     } catch (exception) {
       console.error('Unexpected password update exception', exception);
       this.errorMessage = 'Erro inesperado ao atualizar a senha. Tente novamente.';
