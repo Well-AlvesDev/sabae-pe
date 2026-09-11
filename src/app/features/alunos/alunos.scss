@@ -108,6 +108,36 @@ h1 {
   font-size: 0.82rem;
 }
 
+.ranking-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 10px;
+}
+
+.ranking-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #718096;
+  font-size: 0.72rem;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.warning-absence-color {
+  background: #ecd906;
+}
+
+.high-absence-color {
+  background: #f11414;
+}
+
 .student-list {
   overflow: hidden;
   border-radius: 8px;
@@ -117,15 +147,35 @@ h1 {
 
 .student-item {
   position: relative;
-  min-height: 84px;
+  min-height: 68px;
   padding-right: 36px;
   border-bottom: 1px solid #e6edf4;
   cursor: pointer;
 }
 
+.student-item.warning-absence {
+  background: #ecd906;
+}
+
+.student-item.high-absence {
+  background: #f11414;
+}
+
 .student-item:hover,
 .student-item:focus-visible {
-  background: #f5f9fd;
+  filter: brightness(0.92);
+}
+
+:host ::ng-deep .student-item .mdc-list-item__primary-text,
+:host ::ng-deep .student-item .mdc-list-item__secondary-text,
+:host ::ng-deep .student-item .absence-total,
+:host ::ng-deep .student-item .absence-total strong,
+:host ::ng-deep .student-item .absence-total small {
+  color: #2e2d2d !important;
+}
+
+:host ::ng-deep .student-item .student-arrow {
+  border-color: #fff;
 }
 
 .student-item:last-child {
@@ -177,44 +227,16 @@ h1 {
 }
 
 .absence-total.warning {
-  color: #c8ae1a !important;
+  color: #2c2c2c !important;
 }
 
 .absence-total.danger {
-  color: #dc2626 !important;
-}
-
-.absence-breakdown {
-  display: inline-flex;
-  gap: 10px;
-  margin-left: 12px;
-  color: #64748b;
-  font-size: 0.7rem;
+  color: #2c2c2c !important;
 }
 
 .absence-line {
   display: flex !important;
   align-items: baseline;
-  gap: 12px;
-}
-
-.absence-breakdown > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.absence-breakdown .material-icons {
-  font-size: 14px;
-}
-
-.unjustified .material-icons,
-.unjustified {
-  color: #dc2626;
-}
-
-.justified {
-  color: #2563eb;
 }
 
 .state-panel {

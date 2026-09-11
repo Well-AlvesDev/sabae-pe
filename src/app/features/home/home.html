@@ -13,7 +13,7 @@
       <mat-progress-spinner *ngIf="isLoadingProfile" diameter="28" strokeWidth="3" mode="indeterminate"
         aria-hidden="true"></mat-progress-spinner>
     </div>
-    <button class="icon-button" aria-label="Notificações">
+    <button class="icon-button notification-button" aria-label="Notificações">
       <span class="material-icons">notifications</span>
     </button>
   </div>
@@ -94,6 +94,9 @@
             <span class="material-icons">military_tech</span>
             <strong>Avaliação de frequência</strong>
           </div>
+          <p class="attendance-score-legend">
+            Média = presenças ÷ (presenças + faltas não justificadas) × 10. Faltas justificadas não entram no cálculo.
+          </p>
           <ng-container *ngIf="isLoadingAttendanceScore; else attendanceContent">
             <div class="card-loader" aria-label="Carregando avaliação de frequência">
               <div class="md-skeleton" aria-hidden="true">
@@ -330,6 +333,14 @@
         <div class="card-title">
           <span class="material-icons">school</span>
           <strong>Situação por turma</strong>
+        </div>
+        <div class="classroom-status-legend" aria-label="Legenda dos badges de situação por turma">
+          <span class="classroom-legend-item"><i class="classroom-legend-swatch good" aria-hidden="true"></i>Ótimo/Bom:
+            presença igual ou superior a 80%</span>
+          <span class="classroom-legend-item"><i class="classroom-legend-swatch warning" aria-hidden="true"></i>Regular:
+            presença de 76% a 79%</span>
+          <span class="classroom-legend-item"><i class="classroom-legend-swatch danger" aria-hidden="true"></i>Atenção:
+            presença abaixo de 76%</span>
         </div>
         <div class="classroom-month-filter">
           <mat-form-field class="material-select classroom-month-select" appearance="outline">

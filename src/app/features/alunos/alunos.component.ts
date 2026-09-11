@@ -197,9 +197,10 @@ export class AlunosComponent implements OnInit, OnDestroy {
     const month = Number(this.selectedMonth());
     const room = this.selectedRoom();
     const students = this.rows
+      .filter(row => this.getValue(row, 'STATUS').toLocaleUpperCase() !== 'TRANSFERIDO')
       .filter(row => room === 'all' || this.getValue(row, 'TURMA') === room)
       .map(row => this.toStudentAbsence(row, month))
-      .filter(student => student.total >= 2)
+      .filter(student => student.total > 2)
       .sort((first, second) => second.total - first.total || first.name.localeCompare(second.name, 'pt-BR'));
 
     this.students.set(students);
@@ -228,7 +229,7 @@ export class AlunosComponent implements OnInit, OnDestroy {
       room: this.getValue(row, 'TURMA') || 'Turma não informada',
       unjustified,
       justified,
-      total: unjustified + justified,
+      total: unjustified,
     };
   }
 

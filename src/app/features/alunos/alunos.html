@@ -16,7 +16,7 @@
             <mat-spinner diameter="22" aria-label="Carregando perfil"></mat-spinner>
             }
         </div>
-        <button class="icon-button" type="button" aria-label="Notificações">
+        <button class="icon-button notification-button" type="button" aria-label="Notificações">
             <span class="material-icons">notifications</span>
         </button>
     </div>
@@ -122,8 +122,8 @@
         } @else if (!students().length) {
         <div class="state-panel" aria-live="polite">
             <span class="material-icons" aria-hidden="true">task_alt</span>
-            <strong>Nenhum aluno com 2 ou mais faltas</strong>
-            <span>Não há alunos com 2 ou mais faltas em {{ monthLabel() }} nesta seleção.</span>
+            <strong>Nenhum aluno com mais de 2 faltas</strong>
+            <span>Não há alunos com mais de 2 faltas em {{ monthLabel() }} nesta seleção.</span>
         </div>
         } @else {
         <div class="list-heading">
@@ -131,25 +131,27 @@
                 <h2>Ranking de faltas</h2>
                 <span>{{ students().length }} aluno{{ students().length === 1 ? '' : 's' }} com faltas em {{
                     monthLabel() }}</span>
+                <div class="ranking-legend" aria-label="Legenda das cores do ranking">
+                    <span class="legend-item"><i class="legend-color warning-absence-color" aria-hidden="true"></i>De 3
+                        a 5 faltas</span>
+                    <span class="legend-item"><i class="legend-color high-absence-color" aria-hidden="true"></i>Acima de
+                        5 faltas</span>
+                </div>
             </div>
         </div>
         <mat-list class="student-list" aria-label="Alunos ordenados por número de faltas">
             @for (student of paginatedStudents(); track student.registration || student.name) {
-            <mat-list-item class="student-item" role="button" tabindex="0" (click)="openStudentDetails(student)"
-                (keydown.enter)="openStudentDetails(student)"
+            <mat-list-item class="student-item" [class.warning-absence]="student.total >= 3 && student.total <= 5"
+                [class.high-absence]="student.total > 5" role="button" tabindex="0"
+                (click)="openStudentDetails(student)" (keydown.enter)="openStudentDetails(student)"
                 (keydown.space)="$event.preventDefault(); openStudentDetails(student)">
                 <span matListItemTitle>{{ student.name }}</span>
-                <span matListItemLine>{{ student.room }}{{ student.registration ? ' • Matrícula ' + student.registration
-                    : '' }}</span>
+                <span matListItemLine>{{ student.room }}</span>
                 <span matListItemLine class="absence-line" aria-label="Resumo de faltas">
-                    <span class="absence-total" [class.warning]="student.total >= 3 && student.total <= 6"
-                        [class.danger]="student.total > 6" [attr.aria-label]="student.total + ' faltas no mês'">
+                    <span class="absence-total" [class.warning]="student.total >= 3 && student.total <= 5"
+                        [class.danger]="student.total > 5" [attr.aria-label]="student.total + ' faltas no mês'">
                         <strong>{{ student.total }}</strong>
                         <small>faltas</small>
-                    </span>
-                    <span class="absence-breakdown" aria-label="Detalhamento das faltas">
-                        <span class="unjustified">{{ student.unjustified }} FNJ</span>
-                        <span class="justified">{{ student.justified }} FJ</span>
                     </span>
                 </span>
                 <span matListItemMeta class="student-arrow" aria-hidden="true"></span>

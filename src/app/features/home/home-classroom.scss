@@ -14,6 +14,32 @@
   margin-bottom: 0;
 }
 
+.classroom-status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: -4px;
+}
+
+.classroom-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #556070;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.classroom-legend-swatch {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+
+.classroom-legend-swatch.good { background: rgba(22, 163, 74, 0.75); }
+.classroom-legend-swatch.warning { background: rgba(237, 188, 9, 0.8); }
+.classroom-legend-swatch.danger { background: rgba(220, 38, 38, 0.75); }
+
 .classroom-list {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
