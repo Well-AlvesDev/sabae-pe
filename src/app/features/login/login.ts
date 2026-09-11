@@ -75,6 +75,11 @@ export class LoginComponent implements OnInit {
       return;
     }
 
+    if (this.activatedRoute.snapshot.queryParamMap.get('reset') === 'true') {
+      this.showForgotPassword = true;
+      this.loginData.email = this.activatedRoute.snapshot.queryParamMap.get('email') ?? '';
+    }
+
     const [{ data: localData }, { data: sessionData }] = await Promise.all([
       supabase.auth.getSession(),
       supabaseWithSessionStorage.auth.getSession(),

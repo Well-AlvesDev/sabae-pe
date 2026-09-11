@@ -17,6 +17,11 @@ export const routes: Routes = [
     data: { developmentOnly: true },
   },
   {
+    path: 'reset-password-expired-dev',
+    loadComponent: () => import('./features/login/reset-password').then(m => m.ResetPasswordComponent),
+    data: { developmentOnly: true, expiredLink: true },
+  },
+  {
     path: 'home',
     loadComponent: () => import('./features/home/home.component').then(m => m.HomeComponent),
     canActivate: [authGuard],
