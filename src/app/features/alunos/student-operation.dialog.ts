@@ -10,13 +10,29 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { ensureTbdaCache, getTbdaClassrooms, getTbdaShifts, insertStudent, updateStudentClassroom, updateStudentName, updateStudentShift, updateStudentStatus, type StudentAdministrativeStatus } from '../../supabase';
+import type { AttendanceDay } from './aluno-attendance.dialog';
 
 export type StudentOperation =
   | 'Adicionar Aluno'
   | 'Alterar Status do Aluno'
   | 'Alterar Turma do Aluno'
   | 'Alterar Nome do Aluno'
-  | 'Alterar turno';
+  | 'Alterar turno'
+  | 'Visualizar aluno';
+
+export type StudentOverviewMonth = {
+  month: number;
+  label: string;
+  days: AttendanceDay[];
+  present: number;
+  unjustified: number;
+  justified: number;
+};
+
+export type StudentOverviewDialogData = {
+  student: StudentSearchItem;
+  months: StudentOverviewMonth[];
+};
 
 type StudentSearchItem = {
   name: string;
@@ -49,7 +65,9 @@ export type StudentOperationDialogData = {
       <header class="dialog-header">
         <div>
           <p class="dialog-eyebrow" [class.operation-alter]="data.operation.startsWith('Alterar')"
-            [class.operation-add]="data.operation.startsWith('Adicionar')">Operar aluno</p>
+            [class.operation-add]="data.operation.startsWith('Adicionar')">
+            {{ data.operation === 'Visualizar aluno' ? 'Visualizar aluno' : 'Operar aluno' }}
+          </p>
           <h2 id="operation-dialog-title">{{ data.operation }}</h2>
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
@@ -251,6 +269,12 @@ export class StudentOperationDialogComponent {
   }
 
   public selectStudent(student: StudentSearchItem): void {
+    if (this.data.operation === 'Visualizar aluno') {
+      this.dialogRef.close();
+      void this.openStudentOverview(student);
+      return;
+    }
+
     if (this.data.operation === 'Alterar Status do Aluno') {
       this.dialog.open(StudentTransferStatusDialogComponent, {
         data: { student },
@@ -294,6 +318,33 @@ export class StudentOperationDialogComponent {
     this.dialogRef.close(student);
   }
 
+  public async openStudentOverview(student: StudentSearchItem): Promise<void> {
+    try {
+      const rows = await ensureTbdaCache();
+      const row = rows.find(candidate =>
+        this.getValue(candidate, 'NOME') === student.name
+        && this.getValue(candidate, 'TURMA') === student.room
+        && this.getValue(candidate, 'MAT', 'MATRICULA', 'MATRÍCULA') === student.registration,
+      );
+
+      if (!row) {
+        return;
+      }
+
+      this.dialog.open(StudentOverviewDialogComponent, {
+        data: {
+          student,
+          months: this.buildStudentOverviewMonths(row),
+        },
+        autoFocus: false,
+        maxWidth: 'calc(100vw - 20px)',
+        panelClass: 'student-overview-dialog-panel',
+      });
+    } catch {
+      // Keep the operation dialog closed and silently ignore the preview failure.
+    }
+  }
+
   constructor(
     @Inject(MAT_DIALOG_DATA) public readonly data: StudentOperationDialogData,
     private readonly dialogRef: MatDialogRef<StudentOperationDialogComponent>,
@@ -335,6 +386,51 @@ export class StudentOperationDialogComponent {
     }
   }
 
+  private buildStudentOverviewMonths(row: Record<string, unknown>): StudentOverviewMonth[] {
+    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    return Array.from({ length: 12 }, (_, index) => {
+      const month = index + 1;
+      const days = this.buildAttendanceDays(row, month);
+      const present = days.filter(day => day.status === 'P').length;
+      const unjustified = days.filter(day => day.status === 'FNJ').length;
+      const justified = days.filter(day => day.status === 'FJ').length;
+
+      return {
+        month,
+        label: monthNames[index],
+        days,
+        present,
+        unjustified,
+        justified,
+      };
+    });
+  }
+
+  private buildAttendanceDays(row: Record<string, unknown>, month: number): AttendanceDay[] {
+    const year = new Date().getFullYear();
+    const dayCount = new Date(year, month, 0).getDate();
+    const weekdays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+    return Array.from({ length: dayCount }, (_, index) => {
+      const day = index + 1;
+      const date = new Date(year, month - 1, day);
+
+      if (date.getDay() === 0 || date.getDay() === 6) {
+        return null;
+      }
+
+      const value = String(row[String(day)] ?? '').toUpperCase();
+      const match = value.match(new RegExp(`\\b(P|FNJ|FJ):${month}\\b`));
+
+      return {
+        day,
+        weekday: weekdays[date.getDay()],
+        status: (match?.[1] as AttendanceDay['status']) || null,
+      };
+    }).filter((day): day is AttendanceDay => day !== null);
+  }
+
   private getValue(row: Record<string, unknown>, ...keys: string[]): string {
     for (const key of keys) {
       const value = row[key] ?? row[key.toUpperCase()] ?? row[key.toLowerCase()];
@@ -352,6 +448,122 @@ export class StudentOperationDialogComponent {
   private getStudentStatus(row: Record<string, unknown>): StudentAdministrativeStatus {
     const status = this.normalize(this.getValue(row, 'STATUS'));
     return status === 'transferido' ? 'Transferido' : 'Matriculado';
+  }
+}
+
+@Component({
+  selector: 'app-student-overview-dialog',
+  imports: [CommonModule, MatDialogModule],
+  template: `
+    <section class="student-overview-dialog" aria-labelledby="student-overview-dialog-title">
+      <header class="dialog-header">
+        <div>
+          <p class="dialog-eyebrow">Aluno selecionado</p>
+          <h2 id="student-overview-dialog-title">{{ data.student.name }}</h2>
+          <p class="student-meta">
+            {{ data.student.room || 'Turma não informada' }}
+            @if (data.student.registration) {
+              • Matrícula {{ data.student.registration }}
+            }
+          </p>
+          @if (data.student.status) {
+            <p class="student-meta">Status: {{ data.student.status }}</p>
+          }
+        </div>
+        <button class="dialog-close" type="button" aria-label="Fechar detalhes" mat-dialog-close>
+          <span class="material-icons" aria-hidden="true">close</span>
+        </button>
+      </header>
+
+      <div class="overview-list" aria-label="Calendários de frequência do aluno">
+        @for (month of data.months; track month.month) {
+          <article class="month-card">
+            <div class="month-heading">
+              <strong>{{ month.label }}</strong>
+              <div class="summary" aria-label="Resumo de presença do mês">
+                <span class="present">P: {{ month.present }}</span>
+                <span class="unjustified">FNJ: {{ month.unjustified }}</span>
+                <span class="justified">FJ: {{ month.justified }}</span>
+              </div>
+            </div>
+
+            <div class="status-legend" aria-label="Legenda de frequência">
+              <span><i class="status-dot present"></i> Presença</span>
+              <span><i class="status-dot unjustified"></i> Falta não justificada</span>
+              <span><i class="status-dot justified"></i> Falta justificada</span>
+              <span><i class="status-dot empty"></i> Sem registro</span>
+            </div>
+
+            <div class="day-grid" role="list" [attr.aria-label]="'Frequência de ' + data.student.name + ' em ' + month.label">
+              @for (item of month.days; track item.day) {
+                <div class="day-cell" role="listitem" [class.present]="item.status === 'P'"
+                  [class.unjustified]="item.status === 'FNJ'" [class.justified]="item.status === 'FJ'"
+                  [attr.aria-label]="'Dia ' + item.day + ': ' + statusLabel(item.status)">
+                  <small class="weekday">{{ item.weekday }}</small>
+                  <strong>{{ item.day }}</strong>
+                  <small class="day-status">{{ item.status || '-' }}</small>
+                </div>
+              }
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  `,
+  styles: [`
+    :host { display: block; }
+    .student-overview-dialog { display: flex; width: min(960px, calc(100vw - 32px)); max-height: min(760px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
+    .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #3478c8; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    h2 { margin: 0; color: #0c365c; font-size: 1.45rem; line-height: 1.2; }
+    .student-meta { margin: 6px 0 0; color: #718096; font-size: 0.82rem; }
+    .dialog-close { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; color: #64748b; cursor: pointer; }
+    .dialog-close:hover { background: #edf3f9; color: #0f4d91; }
+    .overview-list { display: grid; gap: 18px; overflow-y: auto; padding-right: 6px; }
+    .month-card { padding: 18px; border: 1px solid #dbe5ef; border-radius: 16px; background: #f8fbff; }
+    .month-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .month-heading > strong { color: #0c365c; font-size: 1rem; text-transform: uppercase; }
+    .summary { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.76rem; }
+    .summary .present { color: #16a34a; }
+    .summary .unjustified { color: #dc2626; }
+    .summary .justified { color: #2563eb; }
+    .status-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 14px; color: #64748b; font-size: 0.7rem; }
+    .status-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; }
+    .status-dot.present { background: #16a34a; }
+    .status-dot.unjustified { background: #dc2626; }
+    .status-dot.justified { background: #2563eb; }
+    .status-dot.empty { background: #cbd5e1; }
+    .day-grid { display: grid; grid-template-columns: repeat(5, minmax(42px, 54px)); justify-content: start; gap: 9px; }
+    .day-cell { display: flex; width: 54px; aspect-ratio: 1; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 2px solid #cbd5e1; border-radius: 50%; background: #f1f3f5; color: #8993a0; }
+    .day-cell strong { font-size: 0.9rem; line-height: 1; }
+    .day-cell small { font-size: 0.58rem; font-weight: 700; line-height: 1; }
+    .day-cell .weekday { text-transform: lowercase; }
+    .day-cell .day-status { font-size: 0.56rem; }
+    .day-cell.present { border-color: #16a34a; background: #16a34a; color: #fff; }
+    .day-cell.unjustified { border-color: #dc2626; background: #dc2626; color: #fff; }
+    .day-cell.justified { border-color: #2563eb; background: #2563eb; color: #fff; }
+    @media (max-width: 640px) {
+      .student-overview-dialog { padding: 18px 14px; }
+      .month-heading { flex-direction: column; align-items: flex-start; }
+      .day-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+      .day-cell { width: 100%; min-width: 0; }
+      .day-cell strong { font-size: 0.78rem; }
+      .day-cell small { font-size: 0.5rem; }
+    }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class StudentOverviewDialogComponent {
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public readonly data: StudentOverviewDialogData,
+  ) {}
+
+  public statusLabel(status: AttendanceDay['status']): string {
+    if (status === 'P') return 'presença';
+    if (status === 'FNJ') return 'falta não justificada';
+    if (status === 'FJ') return 'falta justificada';
+    return 'sem registro';
   }
 }
 

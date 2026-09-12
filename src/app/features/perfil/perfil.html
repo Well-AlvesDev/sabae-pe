@@ -1,0 +1,146 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+    <div class="leading">
+        <button class="icon-button menu-button" aria-label="Abrir menu" (click)="toggleMenu()">
+            <span class="material-icons">menu</span>
+        </button>
+        <div class="brand" aria-label="Logo da SABAE">
+            <img src="/sabae-max.webp" alt="SABAE logo" class="app-bar-logo">
+        </div>
+    </div>
+    <div class="actions">
+        <div class="profile-avatar" [class.loading]="isLoadingProfile" aria-label="Perfil do usuário">
+            <ng-container *ngIf="isLoadingProfile; else topAvatarContent">
+                <mat-progress-spinner diameter="28" strokeWidth="3" mode="indeterminate"
+                    aria-hidden="true"></mat-progress-spinner>
+            </ng-container>
+            <ng-template #topAvatarContent>
+                <span>{{ avatarInitial }}</span>
+            </ng-template>
+        </div>
+    </div>
+</header>
+
+<div class="drawer-backdrop" *ngIf="isMenuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+<nav class="side-drawer" [class.open]="isMenuOpen" aria-label="Menu lateral">
+    <div class="drawer-header"
+        [ngStyle]="{ 'background-image': drawerBackgroundUrl ? 'url(' + drawerBackgroundUrl + ')' : 'none' }">
+        <div class="drawer-overlay"></div>
+        <div class="drawer-profile">
+            <div class="drawer-avatar" [class.loading]="isLoadingProfile"
+                [attr.aria-label]="isLoadingProfile ? 'Carregando perfil do usuário' : 'Perfil do usuário'">
+                <ng-container *ngIf="isLoadingProfile; else drawerAvatarContent">
+                    <mat-progress-spinner diameter="48" strokeWidth="3" mode="indeterminate"
+                        aria-hidden="true"></mat-progress-spinner>
+                </ng-container>
+                <ng-template #drawerAvatarContent>
+                    <span>{{ avatarInitial }}</span>
+                </ng-template>
+            </div>
+            <div class="drawer-text">
+                <div class="drawer-title">{{ schoolName }}</div>
+                <div class="drawer-subtitle">{{ userEmail }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="drawer-items">
+        <button class="drawer-item" type="button">
+            <span class="material-icons">visibility</span>
+            Visualizar Aluno
+        </button>
+        <button class="drawer-item logout-button" type="button">
+            <span class="material-icons">exit_to_app</span>
+            Sair
+        </button>
+    </div>
+</nav>
+
+<div class="home-content">
+    <div class="dashboard-shell">
+        <div class="overview-title-row" aria-label="Perfil do usuário">
+            <h2>Perfil do monitor</h2>
+        </div>
+
+        <section class="overview-card" aria-label="Informações do usuário">
+            <div class="overview-body">
+                <div class="overview-left">
+                    <div class="profile-photo-section">
+                        <div class="profile-photo-wrapper" aria-label="Avatar do usuário">
+                            <div class="profile-photo-fallback">{{ avatarInitial }}</div>
+                        </div>
+                    </div>
+                    <div class="card-title">
+                        <span class="material-icons">account_circle</span>
+                        <strong>Informações do usuário</strong>
+                    </div>
+                    <div class="score-row user-name-row">
+                        <div class="score-label">Nome:</div>
+                        <div class="score-value user-name-value">
+                            <ng-container *ngIf="!isEditingDisplayName; else displayNameEditorTemplate">
+                                <span>{{ userName }}</span>
+                                <button type="button" class="edit-name-button" (click)="startEditingDisplayName()"
+                                    aria-label="Editar nome do usuário">
+                                    <span class="material-icons">edit</span>
+                                </button>
+                            </ng-container>
+                            <ng-template #displayNameEditorTemplate>
+                                <div class="display-name-editor">
+                                    <input type="text" class="display-name-input" [(ngModel)]="displayNameInput"
+                                        [disabled]="isSavingDisplayName" aria-label="Alterar nome do usuário"
+                                        maxlength="50" />
+                                    <button type="button" class="display-name-action save" (click)="saveDisplayName()"
+                                        [disabled]="isSavingDisplayName" aria-label="Salvar nome do usuário">
+                                        <ng-container *ngIf="!isSavingDisplayName; else savingDisplayNameTemplate">
+                                            <span class="material-icons">check</span>
+                                        </ng-container>
+                                        <ng-template #savingDisplayNameTemplate>
+                                            <mat-progress-spinner diameter="18" strokeWidth="3" mode="indeterminate"
+                                                aria-hidden="true"></mat-progress-spinner>
+                                        </ng-template>
+                                    </button>
+                                    <button type="button" class="display-name-action cancel"
+                                        (click)="cancelEditingDisplayName()" [disabled]="isSavingDisplayName"
+                                        aria-label="Cancelar edição do nome do usuário">
+                                        <span class="material-icons">close</span>
+                                    </button>
+                                </div>
+                            </ng-template>
+                        </div>
+                    </div>
+                    <div class="display-name-error" *ngIf="displayNameError">{{ displayNameError }}</div>
+                    <div class="score-row">
+                        <div class="score-label">E-mail:</div>
+                        <div class="score-value">{{ userEmail }}</div>
+                    </div>
+                    <div class="score-row">
+                        <div class="score-label">Escola:</div>
+                        <div class="score-value">{{ schoolName }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"
+        aria-current="page">
+        <span class="material-icons">home</span>
+        <span class="label">Início</span>
+    </a>
+    <a class="nav-item" routerLink="/chamada" aria-label="Chamada">
+        <span class="material-icons">assignment</span>
+        <span class="label">Chamada</span>
+    </a>
+    <a class="nav-item" routerLink="/planilhas" aria-label="Planilhas">
+        <span class="material-icons">bar_chart</span>
+        <span class="label">Planilhas</span>
+    </a>
+    <a class="nav-item" routerLink="/alunos" routerLinkActive="active" aria-label="Alunos">
+        <span class="material-icons">people</span>
+        <span class="label">Alunos</span>
+    </a>
+    <a class="nav-item active" routerLink="/perfil" routerLinkActive="active" aria-label="Perfil">
+        <span class="material-icons">account_circle</span>
+        <span class="label">Perfil</span>
+    </a>
+</nav>

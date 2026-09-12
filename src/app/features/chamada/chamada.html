@@ -64,10 +64,10 @@
                     (click)="openStudentOperation('Alterar turno')">Alterar turno</button>
             </div>
         </details>
-        <a class="drawer-item" href="#">
-            <span class="material-icons">support_agent</span>
-            Suporte
-        </a>
+        <button class="drawer-item" type="button" (click)="openStudentOperation('Visualizar aluno')">
+            <span class="material-icons">visibility</span>
+            Visualizar Aluno
+        </button>
         <button class="drawer-item logout-button" type="button" (click)="logout()">
             <span class="material-icons">exit_to_app</span>
             Sair
@@ -246,7 +246,7 @@
         <span class="material-icons">people</span>
         <span class="label">Alunos</span>
     </a>
-    <a class="nav-item" href="#" aria-label="Perfil">
+    <a class="nav-item" routerLink="/perfil" aria-label="Perfil">
         <span class="material-icons">account_circle</span>
         <span class="label">Perfil</span>
     </a>

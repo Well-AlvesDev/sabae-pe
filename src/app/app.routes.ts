@@ -45,5 +45,11 @@ export const routes: Routes = [
     canActivate: [authGuard],
     data: { reuse: true, requiresModuleAccess: true },
   },
+  {
+    path: 'perfil',
+    loadComponent: () => import('./features/perfil/perfil.component').then(m => m.PerfilComponent),
+    canActivate: [authGuard],
+    data: { reuse: true, requiresModuleAccess: true },
+  },
   { path: '**', redirectTo: 'login' },
 ];
