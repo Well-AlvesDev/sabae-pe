@@ -1,4 +1,10 @@
 <div class="login-shell">
+    <div class="login-loading" *ngIf="isLoading" role="status" aria-live="polite" aria-busy="true">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p>{{ loadingMessage }}</p>
+        <span>Aguarde enquanto protegemos seu acesso.</span>
+    </div>
+
     <mat-card class="login-card">
         <mat-card-header>
             <img class="login-logo" style="margin-bottom: 20px; width: 150px;" ngSrc="sabae-max2.webp" width="200"
@@ -72,7 +78,7 @@
                     </mat-checkbox>
 
                     <button mat-raised-button color="primary" class="full-width submit-button" type="submit"
-                        [class.loading]="isSubmitting">
+                        [class.loading]="isSubmitting" [disabled]="isSubmitting || isLoading">
                         <span class="button-content" *ngIf="!isSubmitting">Entrar</span>
                         <span class="button-content" *ngIf="isSubmitting">
                             <mat-spinner class="button-spinner" diameter="20" strokeWidth="2"></mat-spinner>
@@ -82,7 +88,8 @@
                     <div class="auth-error" *ngIf="authError">{{ authError }}</div>
                 </ng-template>
                 <div class="register-link">
-                    <span style="display:block; text-align: center;font-size: 0.775rem;">Esta área é exclusiva para monitores. O cadastro de
+                    <span style="display:block; text-align: center;font-size: 0.775rem;">Esta área é exclusiva para
+                        monitores. O cadastro de
                         novos usuários é feito de forma interna.</span>
                 </div>
             </form>

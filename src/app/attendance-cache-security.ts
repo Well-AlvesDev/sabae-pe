@@ -51,31 +51,6 @@ function storeCredential(credentialId: string, salt: Uint8Array): void {
   localStorage.setItem(DEVICE_SALT_KEY, toBase64Url(salt));
 }
 
-async function storeSessionKey(key: CryptoKey): Promise<void> {
-  const rawKey = await crypto.subtle.exportKey('raw', key);
-  sessionStorage.setItem(SESSION_AES_KEY, toBase64Url(rawKey));
-}
-
-async function restoreSessionKey(): Promise<CryptoKey | null> {
-  try {
-    const storedKey = sessionStorage.getItem(SESSION_AES_KEY);
-    if (!storedKey) {
-      return null;
-    }
-
-    return crypto.subtle.importKey(
-      'raw',
-      fromBase64Url(storedKey),
-      { name: 'AES-GCM', length: AES_KEY_BYTES * 8 },
-      false,
-      ['encrypt', 'decrypt'],
-    );
-  } catch {
-    sessionStorage.removeItem(SESSION_AES_KEY);
-    return null;
-  }
-}
-
 function assertSupported(): void {
   if (typeof window === 'undefined' || !window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
     throw new Error('Este navegador não oferece desbloqueio seguro por dispositivo.');
@@ -182,18 +157,19 @@ export async function unlockDeviceCache(): Promise<CryptoKey> {
 }
 
 export async function registerOrUnlockDeviceCache(): Promise<CryptoKey> {
-  const sessionKey = await restoreSessionKey();
-  if (sessionKey) {
-    unlockedDeviceCacheKey = sessionKey;
-    return sessionKey;
+  if (unlockedDeviceCacheKey) {
+    return unlockedDeviceCacheKey;
   }
+
+  try {
+    sessionStorage.removeItem(SESSION_AES_KEY);
+  } catch {}
 
   if (!hasDeviceCacheCredential()) {
     await registerDeviceCacheCredential();
   }
 
   unlockedDeviceCacheKey = await unlockDeviceCache();
-  await storeSessionKey(unlockedDeviceCacheKey);
   return unlockedDeviceCacheKey;
 }
 

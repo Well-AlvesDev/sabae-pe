@@ -48,6 +48,8 @@ export class LoginComponent implements OnInit {
   resetMessage: string | null = null;
   isResetSubmitting = false;
   isSubmitting = false;
+  isLoading = false;
+  loadingMessage = 'Verificando sua sessão...';
 
   constructor(
     private cdr: ChangeDetectorRef,
@@ -70,38 +72,46 @@ export class LoginComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    const accessDenied = this.activatedRoute.snapshot.queryParamMap.get('accessDenied') === 'true';
-    if (accessDenied) {
-      this.authError = 'Este módulo de acesso não pertence a este usuário.';
-      return;
-    }
+    this.isLoading = true;
 
-    if (this.activatedRoute.snapshot.queryParamMap.get('reset') === 'true') {
-      this.showForgotPassword = true;
-      this.loginData.email = this.activatedRoute.snapshot.queryParamMap.get('email') ?? '';
-    }
-
-    const [{ data: localData }, { data: sessionData }] = await Promise.all([
-      supabase.auth.getSession(),
-      supabaseWithSessionStorage.auth.getSession(),
-    ]);
-
-    const hasSession = localData?.session || sessionData?.session;
-
-    if (hasSession) {
-      try {
-        await registerOrUnlockDeviceCache();
-        await unlockAttendanceCache();
-        await unlockTbdaCache();
-        await this.router.navigateByUrl('/home');
-      } catch (securityError) {
-        console.error('Device cache security setup failed', securityError);
-        const client = localData?.session ? supabase : supabaseWithSessionStorage;
-        await client.auth.signOut();
-        this.authError = securityError instanceof Error
-          ? securityError.message
-          : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
+    try {
+      const accessDenied = this.activatedRoute.snapshot.queryParamMap.get('accessDenied') === 'true';
+      if (accessDenied) {
+        this.authError = 'Este módulo de acesso não pertence a este usuário.';
+        return;
       }
+
+      if (this.activatedRoute.snapshot.queryParamMap.get('reset') === 'true') {
+        this.showForgotPassword = true;
+        this.loginData.email = this.activatedRoute.snapshot.queryParamMap.get('email') ?? '';
+      }
+
+      const [{ data: localData }, { data: sessionData }] = await Promise.all([
+        supabase.auth.getSession(),
+        supabaseWithSessionStorage.auth.getSession(),
+      ]);
+
+      const hasSession = localData?.session || sessionData?.session;
+
+      if (hasSession) {
+        try {
+          this.loadingMessage = 'Solicitando biometria ou PIN...';
+          await registerOrUnlockDeviceCache();
+          await unlockAttendanceCache();
+          await unlockTbdaCache();
+          await this.router.navigateByUrl('/home');
+        } catch (securityError) {
+          console.error('Device cache security setup failed', securityError);
+          const client = localData?.session ? supabase : supabaseWithSessionStorage;
+          await client.auth.signOut();
+          this.authError = securityError instanceof Error
+            ? securityError.message
+            : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
+        }
+      }
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -116,6 +126,8 @@ export class LoginComponent implements OnInit {
     setActiveTable(this.loginData.accessModule);
 
     this.isSubmitting = true;
+    this.isLoading = true;
+    this.loadingMessage = 'Entrando...';
 
     const client = this.loginData.remember
       ? supabase
@@ -178,6 +190,7 @@ export class LoginComponent implements OnInit {
       }
 
       try {
+        this.loadingMessage = 'Solicitando biometria ou PIN...';
         await registerOrUnlockDeviceCache();
         await unlockAttendanceCache();
         await unlockTbdaCache();
@@ -196,6 +209,7 @@ export class LoginComponent implements OnInit {
       this.authError = 'Erro inesperado ao conectar. Tente novamente.';
     } finally {
       this.isSubmitting = false;
+      this.isLoading = false;
       this.cdr.detectChanges();
     }
   }

@@ -7,6 +7,36 @@
   
 }
 
+.login-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #183b63;
+  text-align: center;
+}
+
+.login-loading p,
+.login-loading span {
+  margin: 0;
+}
+
+.login-loading p {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.login-loading span {
+  color: rgba(24, 59, 99, 0.72);
+  font-size: 0.9rem;
+}
+
 .login-card {
   width: min(420px, 100%);
   max-width: 420px;
