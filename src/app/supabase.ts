@@ -1,10 +1,5 @@
 import { signal } from '@angular/core';
 import { createClient } from '@supabase/supabase-js';
-import {
-  decryptAttendanceCache,
-  encryptAttendanceCache,
-  getUnlockedDeviceCacheKey,
-} from './attendance-cache-security';
 
 const nativeFetch = typeof globalThis !== 'undefined' ? globalThis.fetch?.bind(globalThis) : undefined;
 
@@ -74,21 +69,9 @@ function persistAttendanceCache(entries: AttendanceCacheEntry[]): void {
   attendanceCacheMemory = entries;
   attendanceCacheCount.set(entries.length);
 
-  const key = getUnlockedDeviceCacheKey();
-  if (!key) {
-    return;
-  }
-
-  const snapshot = entries;
-  void encryptAttendanceCache(JSON.stringify(snapshot), key).then(encrypted => {
-    if (attendanceCacheMemory !== snapshot) {
-      return;
-    }
-
-    try {
-      localStorageStore.setItem(getAttendanceCacheKey(), encrypted);
-    } catch {}
-  });
+  try {
+    localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(entries));
+  } catch {}
 }
 
 if (typeof window !== 'undefined') {
@@ -168,21 +151,10 @@ function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
 
 function persistTbdaCache(payload: TbdaCachePayload): void {
   tbdaCacheMemory = payload.data;
-  const key = getUnlockedDeviceCacheKey();
-  if (!key) {
-    return;
-  }
 
-  const snapshot = JSON.stringify(payload);
-  void encryptAttendanceCache(snapshot, key).then(encrypted => {
-    if (tbdaCacheMemory !== payload.data) {
-      return;
-    }
-
-    try {
-      localStorageStore.setItem(getTbdaCacheKey(), encrypted);
-    } catch {}
-  });
+  try {
+    localStorageStore.setItem(getTbdaCacheKey(), JSON.stringify(payload));
+  } catch {}
 }
 
 export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
@@ -661,7 +633,7 @@ export function getAttendanceCache(): AttendanceCacheEntry[] {
       })
       .filter((entry): entry is AttendanceCacheEntry => entry !== null);
 
-    if (normalizedEntries.length !== parsed.length && !getUnlockedDeviceCacheKey()) {
+    if (normalizedEntries.length !== parsed.length) {
       try {
         localStorageStore.setItem(getAttendanceCacheKey(), JSON.stringify(normalizedEntries));
       } catch {}
@@ -688,11 +660,6 @@ export function removeAttendanceCacheEntry(savedAt: number): AttendanceCacheEntr
 }
 
 export async function unlockAttendanceCache(): Promise<void> {
-  const key = getUnlockedDeviceCacheKey();
-  if (!key) {
-    throw new Error('O cache de chamadas ainda não foi desbloqueado.');
-  }
-
   const raw = localStorageStore.getItem(getAttendanceCacheKey());
   if (!raw) {
     attendanceCacheMemory = [];
@@ -700,22 +667,23 @@ export async function unlockAttendanceCache(): Promise<void> {
     return;
   }
 
-  let entries: AttendanceCacheEntry[];
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) {
-      entries = getAttendanceCache();
-    } else {
-      const decrypted = await decryptAttendanceCache(raw, key);
-      entries = JSON.parse(decrypted) as AttendanceCacheEntry[];
+    if (!Array.isArray(parsed)) {
+      throw new Error('Cache de chamadas inválido.');
     }
-  } catch {
-    throw new Error('Não foi possível descriptografar as chamadas salvas neste dispositivo.');
-  }
 
-  attendanceCacheMemory = entries;
-  attendanceCacheCount.set(entries.length);
-  persistAttendanceCache(entries);
+    const entries = parsed as AttendanceCacheEntry[];
+    attendanceCacheMemory = entries;
+    attendanceCacheCount.set(entries.length);
+    persistAttendanceCache(entries);
+  } catch {
+    attendanceCacheMemory = [];
+    attendanceCacheCount.set(0);
+    try {
+      localStorageStore.removeItem(getAttendanceCacheKey());
+    } catch {}
+  }
 }
 
 export function lockAttendanceCache(): void {
@@ -794,36 +762,32 @@ export function getTbdaCache(): Record<string, unknown>[] | null {
 }
 
 export async function unlockTbdaCache(): Promise<void> {
-  const key = getUnlockedDeviceCacheKey();
-  if (!key) {
-    throw new Error('O cache escolar ainda não foi desbloqueado.');
-  }
-
   const raw = localStorageStore.getItem(getTbdaCacheKey());
   if (!raw) {
     tbdaCacheMemory = null;
     return;
   }
 
-  let payload: TbdaCachePayload;
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as TbdaCachePayload).data)) {
-      payload = parsed as TbdaCachePayload;
-    } else {
-      payload = JSON.parse(await decryptAttendanceCache(raw, key)) as TbdaCachePayload;
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as TbdaCachePayload).data)) {
+      throw new Error('Cache escolar inválido.');
     }
+
+    const payload = parsed as TbdaCachePayload;
+    if (payload.version !== TBDA_CACHE_VERSION || !Array.isArray(payload.data)) {
+      tbdaCacheMemory = null;
+      return;
+    }
+
+    tbdaCacheMemory = payload.data;
+    persistTbdaCache(payload);
   } catch {
-    throw new Error('Não foi possível descriptografar o cache escolar neste dispositivo.');
-  }
-
-  if (payload.version !== TBDA_CACHE_VERSION || !Array.isArray(payload.data)) {
     tbdaCacheMemory = null;
-    return;
+    try {
+      localStorageStore.removeItem(getTbdaCacheKey());
+    } catch {}
   }
-
-  tbdaCacheMemory = payload.data;
-  persistTbdaCache(payload);
 }
 
 export function clearTbdaCache(): void {

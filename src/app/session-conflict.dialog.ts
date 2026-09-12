@@ -18,8 +18,8 @@ export type SessionConflictAction = 'login' | 'reset';
       </div>
 
       <mat-dialog-content>
-        <p>Sua conta foi acessada em outro dispositivo e esta sessão foi encerrada.</p>
-        <p>Por segurança, o sistema permite apenas uma sessão ativa por vez.</p>
+        <p>Sua conta foi acessada em muitos dispositivos ao mesmo tempo, consequentemente esta sessão foi encerrada.</p>
+        <p>Por segurança, o sistema permite apenas algumas sessões ativas por vez do mesmo usuário.</p>
       </mat-dialog-content>
 
       <mat-dialog-actions align="end">

@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { lockDeviceCache } from './attendance-cache-security';
 import { lockAttendanceCache, lockTbdaCache, supabase, supabaseWithSessionStorage } from './supabase';
 import { SessionConflictDialogComponent, type SessionConflictAction } from './session-conflict.dialog';
 
@@ -70,7 +69,6 @@ export class SessionConflictService {
         supabase.auth.signOut(),
         supabaseWithSessionStorage.auth.signOut(),
       ]);
-      lockDeviceCache();
       lockAttendanceCache();
       lockTbdaCache();
 

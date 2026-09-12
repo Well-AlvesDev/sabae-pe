@@ -10,7 +10,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { registerOrUnlockDeviceCache } from '../../attendance-cache-security';
 import { ACCESS_MODULES, setActiveTable, supabase, supabaseWithSessionStorage, unlockAttendanceCache, unlockTbdaCache } from '../../supabase';
 
 @Component({
@@ -95,18 +94,16 @@ export class LoginComponent implements OnInit {
 
       if (hasSession) {
         try {
-          this.loadingMessage = 'Solicitando biometria ou PIN...';
-          await registerOrUnlockDeviceCache();
           await unlockAttendanceCache();
           await unlockTbdaCache();
           await this.router.navigateByUrl('/home');
         } catch (securityError) {
-          console.error('Device cache security setup failed', securityError);
+          console.error('Cache setup failed', securityError);
           const client = localData?.session ? supabase : supabaseWithSessionStorage;
           await client.auth.signOut();
           this.authError = securityError instanceof Error
             ? securityError.message
-            : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
+            : 'Não foi possível carregar o cache deste dispositivo.';
         }
       }
     } finally {
@@ -190,16 +187,14 @@ export class LoginComponent implements OnInit {
       }
 
       try {
-        this.loadingMessage = 'Solicitando biometria ou PIN...';
-        await registerOrUnlockDeviceCache();
         await unlockAttendanceCache();
         await unlockTbdaCache();
       } catch (securityError) {
-        console.error('Device cache security setup failed', securityError);
+        console.error('Cache setup failed', securityError);
         await client.auth.signOut();
         this.authError = securityError instanceof Error
           ? securityError.message
-          : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
+          : 'Não foi possível carregar o cache deste dispositivo.';
         return;
       }
 
