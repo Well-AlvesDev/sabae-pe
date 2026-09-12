@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { Optional } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -8,6 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
 import type { User } from '@supabase/supabase-js';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
+import { SessionConflictService } from '../../session-conflict.service';
 import {
   ensureTbdaCache,
   getActiveModuleLabel,
@@ -60,7 +62,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
     try {
@@ -68,10 +70,15 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
         supabase.auth.getSession(),
         supabaseWithSessionStorage.auth.getSession(),
       ]);
-      const [{ data: localData }, { data: sessionData }] = await Promise.all([
+      const [{ data: localData, error: localError }, { data: sessionData, error: sessionError }] = await Promise.all([
         supabase.auth.getUser(),
         supabaseWithSessionStorage.auth.getUser(),
       ]);
+      const rejectedError = [localError, sessionError].find(error => this.sessionConflict?.isSessionRejected(error));
+      if (rejectedError && this.sessionConflict) {
+        await this.sessionConflict.show(localData?.user?.email ?? sessionData?.user?.email);
+        return;
+      }
       const user: User | null = localData?.user || sessionData?.user || localSessionData?.session?.user || sessionSessionData?.session?.user || null;
 
       if (user) {

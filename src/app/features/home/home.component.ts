@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
+import { SessionConflictService } from '../../session-conflict.service';
 import {
   clearTbdaCache,
   ensureTbdaCache,
@@ -86,7 +87,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
     this.isLoadingProfile = true;
@@ -95,10 +96,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.lastSearchLabel = getTbdaLastSearchLabel();
 
     try {
-      const [{ data: localData }, { data: sessionData }] = await Promise.all([
+      const [{ data: localData, error: localError }, { data: sessionData, error: sessionError }] = await Promise.all([
         supabase.auth.getUser(),
         supabaseWithSessionStorage.auth.getUser(),
       ]);
+
+      const rejectedError = [localError, sessionError].find(error => this.sessionConflict?.isSessionRejected(error));
+      if (rejectedError && this.sessionConflict) {
+        await this.sessionConflict.show(localData?.user?.email ?? sessionData?.user?.email);
+        return;
+      }
 
       console.debug('[home] getUser results', { localData, sessionData });
 

@@ -10,6 +10,7 @@ import {
 } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SessionConflictService } from './session-conflict.service';
 
 @Component({
   selector: 'app-root',
@@ -24,6 +25,7 @@ export class App {
   public readonly isLoginNavigation = signal(false);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly sessionConflict = inject(SessionConflictService);
 
   constructor() {
     this.router.events.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {

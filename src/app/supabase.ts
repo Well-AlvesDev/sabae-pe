@@ -6,6 +6,21 @@ import {
   getUnlockedDeviceCacheKey,
 } from './attendance-cache-security';
 
+const nativeFetch = typeof globalThis !== 'undefined' ? globalThis.fetch?.bind(globalThis) : undefined;
+
+async function authAwareFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (!nativeFetch) {
+    throw new Error('Fetch não está disponível neste ambiente.');
+  }
+
+  const response = await nativeFetch(input, init);
+  const requestUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  if ((response.status === 401 || response.status === 403) && requestUrl.includes('/auth/v1/user') && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sabae:session-rejected'));
+  }
+  return response;
+}
+
 const SUPABASE_URL = 'https://yoejlumglxbzxtzknsuy.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvZWpsdW1nbHhienh0emtuc3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2OTkyMTYsImV4cCI6MjA4NzI3NTIxNn0.5fhGV2K4G-yzzA84vwISSZLk-KWhnRoowFbhnVTNz7Q';
 
@@ -111,6 +126,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: localStorageStore,
   },
+  global: { fetch: authAwareFetch },
 });
 
 const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
@@ -1237,6 +1253,7 @@ export const supabaseWithSessionStorage = createClient(
     auth: {
       storage: sessionStorageStore,
     },
+    global: { fetch: authAwareFetch },
   }
 );
 

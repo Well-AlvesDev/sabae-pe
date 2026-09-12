@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 import { lockDeviceCache } from '../../attendance-cache-security';
 import { lockAttendanceCache, lockTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { SessionConflictService } from '../../session-conflict.service';
 
 @Component({
   selector: 'app-logout-confirm-dialog',
@@ -121,10 +122,11 @@ import { lockAttendanceCache, lockTbdaCache, supabase, supabaseWithSessionStorag
 export class LogoutConfirmDialogComponent {
   public isProcessing = false;
 
-  constructor(private dialogRef: MatDialogRef<LogoutConfirmDialogComponent>, private router: Router) {}
+  constructor(private dialogRef: MatDialogRef<LogoutConfirmDialogComponent>, private router: Router, private sessionConflict: SessionConflictService) {}
 
   async onConfirm(): Promise<void> {
     this.isProcessing = true;
+    this.sessionConflict.markIntentionalLogout();
     try {
       await Promise.all([supabase.auth.signOut(), supabaseWithSessionStorage.auth.signOut()]);
     } catch (e) {
