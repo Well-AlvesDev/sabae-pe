@@ -1,6 +1,5 @@
 const DEVICE_CREDENTIAL_KEY = 'sabae.attendance.device-credential';
 const DEVICE_SALT_KEY = 'sabae.attendance.device-salt';
-const SESSION_AES_KEY = 'sabae.attendance.session-aes-key';
 const RP_NAME = 'SABAE';
 const RP_ID = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const PRF_SALT_BYTES = 32;
@@ -76,7 +75,7 @@ async function deriveAesKey(prfOutput: ArrayBuffer): Promise<CryptoKey> {
     },
     keyMaterial,
     { name: 'AES-GCM', length: AES_KEY_BYTES * 8 },
-    true,
+    false,
     ['encrypt', 'decrypt'],
   );
 }
@@ -161,10 +160,6 @@ export async function registerOrUnlockDeviceCache(): Promise<CryptoKey> {
     return unlockedDeviceCacheKey;
   }
 
-  try {
-    sessionStorage.removeItem(SESSION_AES_KEY);
-  } catch {}
-
   if (!hasDeviceCacheCredential()) {
     await registerDeviceCacheCredential();
   }
@@ -179,9 +174,6 @@ export function getUnlockedDeviceCacheKey(): CryptoKey | null {
 
 export function lockDeviceCache(): void {
   unlockedDeviceCacheKey = null;
-  try {
-    sessionStorage.removeItem(SESSION_AES_KEY);
-  } catch {}
 }
 
 export async function encryptAttendanceCache(payload: string, key: CryptoKey): Promise<string> {
