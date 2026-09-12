@@ -5,7 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
-import { clearPersistentCache, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { lockDeviceCache } from '../../attendance-cache-security';
+import { lockAttendanceCache, lockTbdaCache, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-logout-confirm-dialog',
@@ -41,7 +42,6 @@ import { clearPersistentCache, supabase, supabaseWithSessionStorage } from '../.
   styles: [
     `
       .legacy-modal {
-        width: min(340px, calc(100vw - 32px));
         padding: 20px 16px;
         font-family: Arial, Helvetica, sans-serif;
         box-sizing: border-box;
@@ -132,7 +132,9 @@ export class LogoutConfirmDialogComponent {
     }
     try { localStorage.removeItem('supabase.auth.token'); } catch {}
     try { sessionStorage.removeItem('supabase.auth.token'); } catch {}
-    clearPersistentCache();
+    lockDeviceCache();
+    lockAttendanceCache();
+    lockTbdaCache();
 
     // navigate after a short delay to allow UI to update
     setTimeout(() => {

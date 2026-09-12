@@ -20,9 +20,6 @@
             <mat-progress-spinner *ngIf="isLoadingProfile" diameter="28" strokeWidth="3" mode="indeterminate"
                 aria-hidden="true"></mat-progress-spinner>
         </div>
-        <button class="icon-button notification-button" aria-label="Notificações" type="button">
-            <span class="material-icons">notifications</span>
-        </button>
     </div>
 </header>
 
@@ -134,7 +131,11 @@
         <span class="material-icons">home</span><span class="label">Início</span>
     </a>
     <a routerLink="/chamada" class="nav-item" aria-label="Chamada">
-        <span class="material-icons">assignment</span><span class="label">Chamada</span>
+        <span class="nav-icon-wrap">
+            <span class="material-icons">assignment</span>
+            <span class="nav-badge" *ngIf="savedAttendanceCount() > 0" aria-hidden="true">{{ savedAttendanceCount()
+                }}</span>
+        </span><span class="label">Chamada</span>
     </a>
     <a routerLink="/planilhas" class="nav-item active" aria-label="Planilhas">
         <span class="material-icons">bar_chart</span><span class="label">Planilhas</span>

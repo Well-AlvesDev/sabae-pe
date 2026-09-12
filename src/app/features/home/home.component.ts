@@ -11,6 +11,7 @@ import {
   clearTbdaCache,
   ensureTbdaCache,
   getActiveModuleLabel,
+  attendanceCacheCount as savedAttendanceCount,
   getTbdaLastSearchLabel,
   setTbdaLastSearchLabel,
   syncTbdaCache,
@@ -39,6 +40,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   public performanceClass: 'good' | 'warning' | 'danger' | 'neutral' = 'neutral';
   public lastSearchLabel = '';
   public isRefreshingAttendance = false;
+  public readonly savedAttendanceCount = savedAttendanceCount;
   public attendanceSummary = {
     totalCount: 0,
     present: 0,

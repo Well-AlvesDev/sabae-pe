@@ -130,10 +130,6 @@ body {
   color: #ffffff;
 }
 
-.top-app-bar .notification-button .material-icons {
-  font-size: 30px;
-}
-
 .menu-button {
   display: inline-flex;
   align-items: center;
@@ -436,6 +432,31 @@ body {
 .bottom-nav .nav-item .material-icons {
   font-size: 24px;
   margin-bottom: 4px;
+}
+
+.bottom-nav .nav-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.bottom-nav .nav-badge {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  display: inline-flex;
+  min-width: 17px;
+  height: 17px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2px solid #09437c;
+  border-radius: 999px;
+  background: #e53935;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0 3px;
 }
 
 .bottom-nav .nav-item .label {

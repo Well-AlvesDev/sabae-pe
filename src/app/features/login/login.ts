@@ -10,7 +10,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ACCESS_MODULES, setActiveTable, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { registerOrUnlockDeviceCache } from '../../attendance-cache-security';
+import { ACCESS_MODULES, setActiveTable, supabase, supabaseWithSessionStorage, unlockAttendanceCache, unlockTbdaCache } from '../../supabase';
 
 @Component({
   selector: 'app-login',
@@ -88,7 +89,19 @@ export class LoginComponent implements OnInit {
     const hasSession = localData?.session || sessionData?.session;
 
     if (hasSession) {
-      this.router.navigateByUrl('/home');
+      try {
+        await registerOrUnlockDeviceCache();
+        await unlockAttendanceCache();
+        await unlockTbdaCache();
+        await this.router.navigateByUrl('/home');
+      } catch (securityError) {
+        console.error('Device cache security setup failed', securityError);
+        const client = localData?.session ? supabase : supabaseWithSessionStorage;
+        await client.auth.signOut();
+        this.authError = securityError instanceof Error
+          ? securityError.message
+          : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
+      }
     }
   }
 
@@ -109,6 +122,9 @@ export class LoginComponent implements OnInit {
       : supabaseWithSessionStorage;
 
     try {
+      // Remove a session from the other storage so the selected persistence mode wins.
+      await (this.loginData.remember ? supabaseWithSessionStorage : supabase).auth.signOut();
+
       const { data, error } = await client.auth.signInWithPassword({
         email: this.loginData.email,
         password: this.loginData.password,
@@ -158,6 +174,19 @@ export class LoginComponent implements OnInit {
       if (accessError || hasAccess !== true) {
         await client.auth.signOut();
         this.authError = 'Este módulo de acesso não pertence a este usuário.';
+        return;
+      }
+
+      try {
+        await registerOrUnlockDeviceCache();
+        await unlockAttendanceCache();
+        await unlockTbdaCache();
+      } catch (securityError) {
+        console.error('Device cache security setup failed', securityError);
+        await client.auth.signOut();
+        this.authError = securityError instanceof Error
+          ? securityError.message
+          : 'Não foi possível desbloquear a proteção das chamadas neste dispositivo.';
         return;
       }
 

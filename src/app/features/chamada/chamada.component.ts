@@ -14,6 +14,7 @@ import {
   ensureTbdaCache,
   getActiveModuleLabel,
   getAttendanceCache,
+  attendanceCacheCount as savedAttendanceCount,
   getAttendanceRegistrationPayloadsForEntry,
   getTbdaClassrooms,
   normalizeAttendanceMonth,
@@ -70,6 +71,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public rooms: string[] = [];
   public students: StudentAttendance[] = [];
   public savedAttendances: AttendanceCacheEntry[] = [];
+  public readonly savedAttendanceCount = savedAttendanceCount;
   public deletingAttendanceSavedAt: number | null = null;
   public isAttendanceModalOpen = false;
   public isEditingAttendance = false;

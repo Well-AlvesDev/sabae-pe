@@ -11,6 +11,7 @@ import { type StudentOperation } from '../alunos/student-operation.dialog';
 import {
   ensureTbdaCache,
   getActiveModuleLabel,
+  attendanceCacheCount as savedAttendanceCount,
   getAttendanceCache,
   getTbdaClassrooms,
   getTbdaShifts,
@@ -48,6 +49,8 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   public isGeneratingReport = false;
   public userEmail = 'Obtendo usuário...';
   public avatarInitial = 'U';
+
+  public readonly savedAttendanceCount = savedAttendanceCount;
   private tbdaRows: Record<string, unknown>[] = [];
   private authSub1: any;
   private authSub2: any;

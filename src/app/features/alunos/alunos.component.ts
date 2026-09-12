@@ -8,7 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { ensureTbdaCache, getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { attendanceCacheCount as savedAttendanceCount, ensureTbdaCache, getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 import { type StudentOperation } from './student-operation.dialog';
 
@@ -64,6 +64,7 @@ export class AlunosComponent implements OnInit, OnDestroy {
   public readonly userEmail = signal('Obtendo usuário...');
   public readonly avatarInitial = signal('U');
   public readonly isLoadingProfile = signal(true);
+  public readonly savedAttendanceCount = savedAttendanceCount;
 
   private rows: Record<string, unknown>[] = [];
   private authSub1: { unsubscribe?: () => void } | undefined;
