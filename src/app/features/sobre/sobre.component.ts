@@ -1,19 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import type { StudentOperation } from '../alunos/student-operation.dialog';
 import { getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-perfil',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, MatProgressSpinnerModule],
-  templateUrl: './perfil.html',
-  styleUrls: ['../home/home.scss', './perfil.scss'],
+  templateUrl: './sobre.html',
+  styleUrls: ['../home/home.scss', './sobre.scss'],
 })
 export class PerfilComponent implements OnInit {
   public readonly schoolName = getActiveModuleLabel();
+  public readonly appVersion = '0.0.0';
   public userName = 'Obtendo usuário...';
   public userEmail = 'Obtendo e-mail...';
   public avatarInitial = 'U';
@@ -25,10 +28,16 @@ export class PerfilComponent implements OnInit {
   public displayNameError = '';
   public drawerBackgroundUrl = '';
   private loadingStart = Date.now();
+  private _logoutDialogOpen = false;
+  private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
+    .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
+  private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
+    .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
   constructor(
     private readonly cdr: ChangeDetectorRef,
     private readonly ngZone: NgZone,
+    private readonly dialog: MatDialog,
   ) {}
 
   public async ngOnInit(): Promise<void> {
@@ -96,6 +105,42 @@ export class PerfilComponent implements OnInit {
 
   public closeMenu(): void {
     this.isMenuOpen = false;
+  }
+
+  public async openStudentOperation(operation: StudentOperation): Promise<void> {
+    this.closeMenu();
+    const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
+    this.dialog.open(StudentOperationDialogComponent, {
+      data: { operation },
+      autoFocus: false,
+      maxWidth: 'calc(100vw - 20px)',
+    });
+  }
+
+  public async logout(): Promise<void> {
+    if (this._logoutDialogOpen) {
+      return;
+    }
+
+    this._logoutDialogOpen = true;
+    try {
+      const LogoutConfirmDialogComponent = await this.logoutDialogComponentPromise;
+      const ref = this.dialog.open(LogoutConfirmDialogComponent, {
+        disableClose: true,
+        hasBackdrop: true,
+        maxWidth: 'calc(100vw - 32px)',
+        panelClass: 'legacy-logout-dialog',
+      });
+
+      try {
+        const confirmed = await ref.afterClosed().toPromise();
+        if (confirmed === true) {
+          this.closeMenu();
+        }
+      } catch {}
+    } finally {
+      this._logoutDialogOpen = false;
+    }
   }
 
   public startEditingDisplayName(): void {

@@ -1,0 +1,143 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+    <div class="leading">
+        <button class="icon-button menu-button" aria-label="Abrir menu" (click)="toggleMenu()">
+            <span class="material-icons">menu</span>
+        </button>
+        <div class="brand" aria-label="Logo da SABAE">
+            <img src="/sabae-max.webp" alt="SABAE logo" class="app-bar-logo">
+        </div>
+    </div>
+    <div class="actions">
+        <div class="profile-avatar" [class.loading]="isLoadingProfile" aria-label="Perfil do usuário">
+            <ng-container *ngIf="isLoadingProfile; else topAvatarContent">
+                <mat-progress-spinner diameter="28" strokeWidth="3" mode="indeterminate"
+                    aria-hidden="true"></mat-progress-spinner>
+            </ng-container>
+            <ng-template #topAvatarContent>
+                <span>{{ avatarInitial }}</span>
+            </ng-template>
+        </div>
+    </div>
+</header>
+
+<div class="drawer-backdrop" *ngIf="isMenuOpen" (click)="closeMenu()" aria-hidden="true"></div>
+<nav class="side-drawer" [class.open]="isMenuOpen" aria-label="Menu lateral">
+    <div class="drawer-header"
+        [ngStyle]="{ 'background-image': drawerBackgroundUrl ? 'url(' + drawerBackgroundUrl + ')' : 'none' }">
+        <div class="drawer-overlay"></div>
+        <div class="drawer-profile">
+            <div class="drawer-avatar" [class.loading]="isLoadingProfile"
+                [attr.aria-label]="isLoadingProfile ? 'Carregando perfil do usuário' : 'Perfil do usuário'">
+                <ng-container *ngIf="isLoadingProfile; else drawerAvatarContent">
+                    <mat-progress-spinner diameter="48" strokeWidth="3" mode="indeterminate"
+                        aria-hidden="true"></mat-progress-spinner>
+                </ng-container>
+                <ng-template #drawerAvatarContent>
+                    <span>{{ avatarInitial }}</span>
+                </ng-template>
+            </div>
+            <div class="drawer-text">
+                <div class="drawer-title">{{ schoolName }}</div>
+                <div class="drawer-subtitle">{{ userEmail }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="drawer-items">
+        <details class="drawer-submenu">
+            <summary class="drawer-item">
+                <span class="material-icons">play_arrow</span>
+                <span>Operar</span>
+                <span class="material-icons drawer-submenu-arrow">expand_more</span>
+            </summary>
+            <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Adicionar Aluno')">
+                    Adicionar Aluno
+                </button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Status do Aluno')">Alterar Status do Aluno
+                    (Transferido/Matriculado)</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Turma do Aluno')">Alterar Turma do Aluno</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Nome do Aluno')">Alterar Nome do Aluno</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar turno')">Alterar
+                    turno</button>
+            </div>
+        </details>
+        <button class="drawer-item" type="button" (click)="openStudentOperation('Visualizar aluno')">
+            <span class="material-icons">visibility</span>
+            Visualizar Aluno
+        </button>
+        <button class="drawer-item logout-button" (click)="logout()" type="button">
+            <span class="material-icons">exit_to_app</span>
+            Sair
+        </button>
+    </div>
+</nav>
+
+<main class="about-page">
+    <section class="about-hero">
+        <div class="about-logo-wrap">
+            <img src="/sabae-max.webp" alt="Logo do SABAE" class="about-logo" />
+        </div>
+        <div class="about-version">Versão {{ appVersion }}</div>
+    </section>
+
+    <section class="about-card">
+        <h1>Sobre o SABAE</h1>
+        <p>
+            O SABAE é uma solução pensada para dar suporte à gestão escolar e à busca ativa escolar, reunindo em um
+            único ambiente ferramentas que ajudam professores, monitores e equipe escolar a acompanhar alunos,
+            organizar chamadas e acompanhar indicadores importantes do dia a dia.
+        </p>
+
+        <div class="about-grid">
+            <article class="about-panel">
+                <h2>O que o app oferece</h2>
+                <ul>
+                    <li>Registro e acompanhamento de chamadas escolares.</li>
+                    <li>Gestão de alunos, turmas, turnos e status administrativos.</li>
+                    <li>Visão geral do desempenho escolar com indicadores de presença.</li>
+                    <li>Geração e consulta de planilhas para organização dos dados.</li>
+                    <li>Perfil do usuário com informações básicas e acesso rápido ao sistema.</li>
+                </ul>
+            </article>
+
+            <article class="about-panel">
+                <h2>Principais recursos</h2>
+                <ul>
+                    <li>Menu lateral com operações rápidas para a rotina escolar.</li>
+                    <li>Dashboard com resumo diário e mensal de frequência.</li>
+                    <li>Busca ativa escolar com suporte à organização de estudantes e turmas.</li>
+                    <li>Atualizações de informações em tempo real dentro do ambiente do app.</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+</main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"
+        aria-current="page">
+        <span class="material-icons">home</span>
+        <span class="label">Início</span>
+    </a>
+    <a class="nav-item" routerLink="/chamada" aria-label="Chamada">
+        <span class="material-icons">assignment</span>
+        <span class="label">Chamada</span>
+    </a>
+    <a class="nav-item" routerLink="/planilhas" aria-label="Planilhas">
+        <span class="material-icons">bar_chart</span>
+        <span class="label">Planilhas</span>
+    </a>
+    <a class="nav-item" routerLink="/alunos" routerLinkActive="active" aria-label="Alunos">
+        <span class="material-icons">people</span>
+        <span class="label">Alunos</span>
+    </a>
+    <a class="nav-item active" routerLink="/sobre" routerLinkActive="active" aria-label="Sobre">
+        <span class="material-icons">info</span>
+        <span class="label">Sobre</span>
+    </a>
+</nav>
