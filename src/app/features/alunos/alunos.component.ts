@@ -8,7 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { attendanceCacheCount as savedAttendanceCount, ensureTbdaCache, getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
+import { attendanceCacheCount as savedAttendanceCount, ensureTbdaCache, getActiveModuleLabel, getActiveStudentFunctionRules, hydrateStudentFunctionRulesFromIndexedDb, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 import { type StudentOperation } from './student-operation.dialog';
 
@@ -78,6 +78,7 @@ export class AlunosComponent implements OnInit, OnDestroy {
   constructor(private readonly router: Router, private readonly dialog: MatDialog) {}
 
   public async ngOnInit(): Promise<void> {
+    await hydrateStudentFunctionRulesFromIndexedDb();
     await this.loadProfile();
     try {
       this.rows = await ensureTbdaCache();
@@ -144,8 +145,30 @@ export class AlunosComponent implements OnInit, OnDestroy {
     });
   }
 
+  public getActiveFunctionCount(): number {
+    return getActiveStudentFunctionRules().length;
+  }
+
   public toggleMenu(): void {
     this.isMenuOpen.update(isOpen => !isOpen);
+  }
+
+  public onSidebarSubmenuToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+    if (!current || !current.open) {
+      return;
+    }
+
+    const parent = current.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    parent.querySelectorAll('details.drawer-submenu').forEach((detail) => {
+      if (detail !== current) {
+        (detail as HTMLDetailsElement).open = false;
+      }
+    });
   }
 
   public closeMenu(): void {

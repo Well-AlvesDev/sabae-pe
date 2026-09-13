@@ -18,6 +18,8 @@ import {
   getAttendanceCache,
   attendanceCacheCount as savedAttendanceCount,
   getAttendanceRegistrationPayloadsForEntry,
+  getActiveStudentFunctionRules,
+  hydrateStudentFunctionRulesFromIndexedDb,
   getTbdaClassrooms,
   normalizeAttendanceMonth,
   removeAttendanceCacheEntry,
@@ -97,6 +99,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    await hydrateStudentFunctionRulesFromIndexedDb();
     this.loadSavedAttendances();
 
     try {
@@ -175,8 +178,30 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     } catch {}
   }
 
+  public getActiveFunctionCount(): number {
+    return getActiveStudentFunctionRules().length;
+  }
+
   public toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  public onSidebarSubmenuToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+    if (!current || !current.open) {
+      return;
+    }
+
+    const parent = current.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    parent.querySelectorAll('details.drawer-submenu').forEach((detail) => {
+      if (detail !== current) {
+        (detail as HTMLDetailsElement).open = false;
+      }
+    });
   }
 
   public closeMenu(): void {
@@ -241,7 +266,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       .map(row => ({
         name: this.getRowText(row, 'NOME'),
         registration: this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
-        status: this.isTransferredRow(row) ? 'FNJ' as const : 'P' as const,
+        status: this.getStudentStatusForActiveFunction(row),
         isTransferred: this.isTransferredRow(row),
       }))
       .filter(student => student.name)
@@ -575,6 +600,40 @@ export class ChamadaComponent implements OnInit, OnDestroy {
       return (registration && rowRegistration === registration || !registration && name && rowName === name)
         && this.isTransferredRow(row);
     });
+  }
+
+  private getStudentStatusForActiveFunction(row: Record<string, unknown>): AttendanceStatus {
+    const studentName = this.getRowText(row, 'NOME');
+    const registration = this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula');
+    const room = this.getRowText(row, 'TURMA');
+    const shift = this.getRowText(row, 'TURNO');
+
+    const activeRules = getActiveStudentFunctionRules();
+    const selectedMonth = normalizeAttendanceMonth(this.selectedMonth);
+    const selectedDay = String(this.selectedDay ?? '').trim();
+    const selectedDateIso = selectedMonth && selectedDay
+      ? `${new Date().getFullYear()}-${String(Number(selectedMonth)).padStart(2, '0')}-${String(Number(selectedDay)).padStart(2, '0')}`
+      : undefined;
+
+    const matchingRule = activeRules.find(rule => {
+      if (rule.condition !== 'Registrando chamada' || rule.trigger !== 'Aluno justificou falta' || rule.action !== 'Justificar falta') {
+        return false;
+      }
+
+      const sameStudent = rule.studentName === studentName || (registration && rule.studentRegistration && rule.studentRegistration === registration);
+      const sameRoom = !rule.studentRoom || rule.studentRoom === room;
+      const sameShift = !rule.studentShift || rule.studentShift === shift;
+      const startOk = !rule.startDate || !selectedDateIso || rule.startDate <= selectedDateIso;
+      const endOk = !rule.endDate || !selectedDateIso || rule.endDate >= selectedDateIso;
+
+      return sameStudent && sameRoom && sameShift && startOk && endOk;
+    });
+
+    if (matchingRule) {
+      return 'FJ' as const;
+    }
+
+    return this.isTransferredRow(row) ? 'FNJ' as const : 'P' as const;
   }
 
   private findSavedAttendance(room: string, monthName: string, day: string): AttendanceCacheEntry | null {

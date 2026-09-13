@@ -14,8 +14,10 @@ import {
   ensureTbdaCache,
   getActiveModuleLabel,
   attendanceCacheCount as savedAttendanceCount,
+  getActiveStudentFunctionRules,
   getAttendanceCache,
   getTbdaClassrooms,
+  hydrateStudentFunctionRulesFromIndexedDb,
   getTbdaShifts,
   normalizeAttendanceMonth,
   supabase,
@@ -65,6 +67,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    await hydrateStudentFunctionRulesFromIndexedDb();
     try {
       const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
         supabase.auth.getSession(),
@@ -119,8 +122,30 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     } catch {}
   }
 
+  public getActiveFunctionCount(): number {
+    return getActiveStudentFunctionRules().length;
+  }
+
   public toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  public onSidebarSubmenuToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+    if (!current || !current.open) {
+      return;
+    }
+
+    const parent = current.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    parent.querySelectorAll('details.drawer-submenu').forEach((detail) => {
+      if (detail !== current) {
+        (detail as HTMLDetailsElement).open = false;
+      }
+    });
   }
 
   public closeMenu(): void {

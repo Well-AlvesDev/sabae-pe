@@ -43,7 +43,7 @@
         </div>
     </div>
     <div class="drawer-items">
-        <details class="drawer-submenu">
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
             <summary class="drawer-item">
                 <span class="material-icons">play_arrow</span>
                 <span>Operar</span>
@@ -66,9 +66,32 @@
                     turno</button>
             </div>
         </details>
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
+            <summary class="drawer-item">
+                <span class="material-icons">calculate</span>
+                <span>Funções</span>
+                <span class="material-icons drawer-submenu-arrow">expand_more</span>
+            </summary>
+            <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Criar função')">
+                    Criar função
+                </button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Visualizar funções')">
+                    <span>Visualizar Funções Ativas</span>
+                    <span class="function-badge">{{ getActiveFunctionCount() }}</span>
+                </button>
+                <button class="drawer-submenu-item delete-operation" type="button"
+                    (click)="openStudentOperation('Excluir função')">
+                    Excluir função
+                </button>
+            </div>
+        </details>
         <button class="drawer-item" type="button" (click)="openStudentOperation('Visualizar aluno')">
             <span class="material-icons">visibility</span>
             Visualizar Aluno
+            <span class="material-icons drawer-item-arrow">chevron_right</span>
         </button>
         <button class="drawer-item logout-button" (click)="logout()" type="button">
             <span class="material-icons">exit_to_app</span>
@@ -95,8 +118,9 @@
 
     <footer class="about-footer">
         <div class="about-version">
-            <span>Versão {{ appVersion }}</span>
-            <span class="about-version-name"><a href="https://instagram.com/weslleykholson" target="_blank" rel="noopener noreferrer">@weslleykholson</a></span>
+            <span>Versão {{ appVersion }}</span><br>
+            <span class="about-version-name">Criador/ Desenvolvedor: <br><a href="https://instagram.com/weslleykholson"
+                    target="_blank" rel="noopener noreferrer">@weslleykholson</a></span>
         </div>
     </footer>
 </main>
@@ -108,7 +132,11 @@
         <span class="label">Início</span>
     </a>
     <a class="nav-item" routerLink="/chamada" aria-label="Chamada">
-        <span class="material-icons">assignment</span>
+        <span class="nav-icon-wrap">
+            <span class="material-icons">assignment</span>
+            <span class="nav-badge" *ngIf="savedAttendanceCount() > 0" aria-hidden="true">{{ savedAttendanceCount()
+                }}</span>
+        </span>
         <span class="label">Chamada</span>
     </a>
     <a class="nav-item" routerLink="/planilhas" aria-label="Planilhas">

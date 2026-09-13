@@ -5,7 +5,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import type { StudentOperation } from '../alunos/student-operation.dialog';
-import { getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../../supabase';
+import {
+  attendanceCacheCount as savedAttendanceCount,
+  getActiveModuleLabel,
+  getActiveStudentFunctionRules,
+  hydrateStudentFunctionRulesFromIndexedDb,
+  supabase,
+  supabaseWithSessionStorage,
+} from '../../supabase';
 
 @Component({
   selector: 'app-perfil',
@@ -17,6 +24,7 @@ import { getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../.
 export class PerfilComponent implements OnInit {
   public readonly schoolName = getActiveModuleLabel();
   public readonly appVersion = '1.0.0';
+  public readonly savedAttendanceCount = savedAttendanceCount;
   public userName = 'Obtendo usuário...';
   public userEmail = 'Obtendo e-mail...';
   public avatarInitial = 'U';
@@ -41,6 +49,7 @@ export class PerfilComponent implements OnInit {
   ) {}
 
   public async ngOnInit(): Promise<void> {
+    await hydrateStudentFunctionRulesFromIndexedDb();
     this.loadingStart = Date.now();
 
     try {
@@ -99,8 +108,30 @@ export class PerfilComponent implements OnInit {
     }
   }
 
+  public getActiveFunctionCount(): number {
+    return getActiveStudentFunctionRules().length;
+  }
+
   public toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  public onSidebarSubmenuToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+    if (!current || !current.open) {
+      return;
+    }
+
+    const parent = current.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    parent.querySelectorAll('details.drawer-submenu').forEach((detail) => {
+      if (detail !== current) {
+        (detail as HTMLDetailsElement).open = false;
+      }
+    });
   }
 
   public closeMenu(): void {

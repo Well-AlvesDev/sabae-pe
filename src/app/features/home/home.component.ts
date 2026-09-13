@@ -13,7 +13,9 @@ import {
   ensureTbdaCache,
   getActiveModuleLabel,
   attendanceCacheCount as savedAttendanceCount,
+  getActiveStudentFunctionRules,
   getTbdaLastSearchLabel,
+  hydrateStudentFunctionRulesFromIndexedDb,
   setTbdaLastSearchLabel,
   syncTbdaCache,
   supabase,
@@ -90,6 +92,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    await hydrateStudentFunctionRulesFromIndexedDb();
     this.isLoadingProfile = true;
     this.isLoadingAttendanceScore = true;
     this.loadingStart = Date.now();
@@ -195,6 +198,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
       this.authSub2 = d2?.subscription;
     } catch {}
+  }
+
+  public getActiveFunctionCount(): number {
+    return getActiveStudentFunctionRules().length;
   }
 
   public calcDashArray(score: number): string {
@@ -642,6 +649,24 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   public toggleMenu(): void {
     this.isMenuOpen = !this.isMenuOpen;
+  }
+
+  public onSidebarSubmenuToggle(event: Event): void {
+    const current = event.currentTarget as HTMLDetailsElement | null;
+    if (!current || !current.open) {
+      return;
+    }
+
+    const parent = current.parentElement;
+    if (!parent) {
+      return;
+    }
+
+    parent.querySelectorAll('details.drawer-submenu').forEach((detail) => {
+      if (detail !== current) {
+        (detail as HTMLDetailsElement).open = false;
+      }
+    });
   }
 
   public closeMenu(): void {

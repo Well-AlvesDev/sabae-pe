@@ -49,6 +49,7 @@ function createSafeStorage(storageType: 'localStorage' | 'sessionStorage'): Stor
 
 const localStorageStore = createSafeStorage('localStorage');
 const sessionStorageStore = createSafeStorage('sessionStorage');
+const tbdaLastSearchMemory = new Map<string, string>();
 
 const CACHE_DB_NAME = 'sabae-cache';
 const CACHE_DB_STORE = 'cache-items';
@@ -175,10 +176,6 @@ async function readIndexedDbCacheValue(key: string): Promise<string | null> {
 }
 
 function persistLocalStorageCacheValue(key: string, value: string): void {
-  try {
-    localStorageStore.setItem(key, value);
-  } catch {}
-
   void writeIndexedDbCacheValue(key, value);
 }
 
@@ -208,7 +205,32 @@ async function hydrateLocalStorageCacheFromIndexedDb(): Promise<void> {
       continue;
     }
 
-    localStorageStore.setItem(key, value);
+    if (key.startsWith('sabae.attendance.cache.')) {
+      try {
+        const parsed = JSON.parse(value) as unknown;
+        if (Array.isArray(parsed)) {
+          attendanceCacheMemory = parsed as AttendanceCacheEntry[];
+          attendanceCacheCount.set(parsed.length);
+        }
+      } catch {}
+    }
+
+    if (key.startsWith('sabae.tbda.cache.')) {
+      try {
+        const parsed = JSON.parse(value) as unknown;
+        if (parsed && typeof parsed === 'object' && Array.isArray((parsed as TbdaCachePayload).data)) {
+          tbdaCacheMemory = (parsed as TbdaCachePayload).data;
+        }
+      } catch {}
+    }
+
+    if (key.startsWith('sabae.tbda.last-search.')) {
+      tbdaLastSearchMemory.set(key, value);
+    }
+
+    try {
+      localStorageStore.removeItem(key);
+    } catch {}
   }
 }
 
@@ -339,13 +361,21 @@ function persistTbdaCache(payload: TbdaCachePayload): void {
 
 export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
   const formatted = formatSaoPauloDateTime(value);
-  persistLocalStorageCacheValue(getTbdaLastSearchKey(), formatted);
+  const key = getTbdaLastSearchKey();
+  tbdaLastSearchMemory.set(key, formatted);
+  persistLocalStorageCacheValue(key, formatted);
   return formatted;
 }
 
 export function getTbdaLastSearchLabel(): string {
+  const key = getTbdaLastSearchKey();
+  const cachedValue = tbdaLastSearchMemory.get(key);
+  if (cachedValue) {
+    return cachedValue;
+  }
+
   try {
-    return localStorageStore.getItem(getTbdaLastSearchKey()) || '';
+    return localStorageStore.getItem(key) || '';
   } catch {
     return '';
   }
@@ -427,6 +457,167 @@ export type AttendanceCacheEntryInput = Omit<AttendanceCacheEntry, 'series' | 'c
   series?: string;
   className?: string;
 };
+
+export type StudentFunctionRule = {
+  name: string;
+  condition: string;
+  trigger: string;
+  action: string;
+  studentName: string;
+  studentRegistration: string;
+  studentRoom: string;
+  studentShift: string;
+  startDate: string;
+  endDate: string;
+  savedAt: number;
+};
+
+const studentFunctionRulesMemory = new Map<string, StudentFunctionRule[]>();
+
+function getStudentFunctionRulesKey(tableName = getActiveTable()): string {
+  return `sabae.functions.${tableName}`;
+}
+
+function normalizeStudentFunctionRule(rule: Partial<StudentFunctionRule>): StudentFunctionRule | null {
+  const name = String(rule.name ?? '').trim();
+  const condition = String(rule.condition ?? '').trim();
+  const trigger = String(rule.trigger ?? '').trim();
+  const action = String(rule.action ?? '').trim();
+  const studentName = String(rule.studentName ?? '').trim();
+  const studentRegistration = String(rule.studentRegistration ?? '').trim();
+  const studentRoom = String(rule.studentRoom ?? '').trim();
+  const studentShift = String(rule.studentShift ?? '').trim();
+  const startDate = String(rule.startDate ?? '').trim();
+  const endDate = String(rule.endDate ?? '').trim();
+
+  if (!name || !condition || !trigger || !action || !startDate || !endDate || !studentName) {
+    return null;
+  }
+
+  return {
+    name,
+    condition,
+    trigger,
+    action,
+    studentName,
+    studentRegistration,
+    studentRoom,
+    studentShift,
+    startDate,
+    endDate,
+    savedAt: Number(rule.savedAt ?? Date.now()),
+  };
+}
+
+function pruneExpiredStudentFunctionRules(rules: StudentFunctionRule[]): StudentFunctionRule[] {
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  return rules.filter(rule => rule.endDate >= todayIso);
+}
+
+export function isStudentFunctionRuleActive(rule: StudentFunctionRule): boolean {
+  const today = new Date();
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const hasStarted = !rule.startDate || rule.startDate <= todayIso;
+  const hasNotEnded = !rule.endDate || rule.endDate >= todayIso;
+
+  return hasStarted && hasNotEnded;
+}
+
+export function getActiveStudentFunctionRules(): StudentFunctionRule[] {
+  return getStudentFunctionRules().filter(rule => isStudentFunctionRuleActive(rule));
+}
+
+export async function hydrateStudentFunctionRulesFromIndexedDb(): Promise<void> {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  for (const module of ACCESS_MODULES) {
+    const key = getStudentFunctionRulesKey(module.table);
+    const value = await readIndexedDbCacheValue(key);
+    if (!value) {
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (!Array.isArray(parsed)) {
+        continue;
+      }
+
+      const normalizedRules = parsed
+        .map(item => normalizeStudentFunctionRule(item as Partial<StudentFunctionRule>))
+        .filter((rule): rule is StudentFunctionRule => rule !== null);
+
+      const activeRules = pruneExpiredStudentFunctionRules(normalizedRules);
+      studentFunctionRulesMemory.set(module.table, activeRules);
+
+      if (activeRules.length !== normalizedRules.length) {
+        await writeIndexedDbCacheValue(key, JSON.stringify(activeRules));
+      }
+    } catch {
+      studentFunctionRulesMemory.delete(module.table);
+    }
+  }
+}
+
+export function getStudentFunctionRules(): StudentFunctionRule[] {
+  const key = getActiveTable();
+  const cachedRules = studentFunctionRulesMemory.get(key) ?? [];
+  const activeRules = pruneExpiredStudentFunctionRules(cachedRules);
+
+  if (activeRules.length !== cachedRules.length) {
+    studentFunctionRulesMemory.set(key, activeRules);
+    void persistStudentFunctionRules(activeRules);
+  }
+
+  return activeRules;
+}
+
+export async function saveStudentFunctionRule(rule: StudentFunctionRule): Promise<boolean> {
+  const key = getActiveTable();
+  const normalizedRule = normalizeStudentFunctionRule(rule);
+  if (!normalizedRule) {
+    return false;
+  }
+
+  const existingRules = getStudentFunctionRules();
+  const hasDuplicateName = existingRules.some(item => item.name.trim().toLocaleLowerCase('pt-BR') === normalizedRule.name.trim().toLocaleLowerCase('pt-BR'));
+  if (hasDuplicateName) {
+    return false;
+  }
+
+  const nextRules = pruneExpiredStudentFunctionRules([...existingRules, normalizedRule]);
+  studentFunctionRulesMemory.set(key, nextRules);
+  await writeIndexedDbCacheValue(getStudentFunctionRulesKey(key), JSON.stringify(nextRules));
+  return true;
+}
+
+export async function persistStudentFunctionRules(rules: StudentFunctionRule[]): Promise<void> {
+  const key = getActiveTable();
+  const normalizedRules = pruneExpiredStudentFunctionRules(rules);
+  studentFunctionRulesMemory.set(key, normalizedRules);
+  await writeIndexedDbCacheValue(getStudentFunctionRulesKey(key), JSON.stringify(normalizedRules));
+}
+
+export async function removeStudentFunctionRule(ruleName: string): Promise<boolean> {
+  const key = getActiveTable();
+  const normalizedName = String(ruleName ?? '').trim();
+
+  if (!normalizedName) {
+    return false;
+  }
+
+  const currentRules = getStudentFunctionRules();
+  const nextRules = currentRules.filter(rule => rule.name.trim().toLocaleLowerCase('pt-BR') !== normalizedName.trim().toLocaleLowerCase('pt-BR'));
+
+  studentFunctionRulesMemory.set(key, nextRules);
+  await writeIndexedDbCacheValue(getStudentFunctionRulesKey(key), JSON.stringify(nextRules));
+  return nextRules.length !== currentRules.length;
+}
 
 export function normalizeAttendanceMonth(value: string | number): string {
   const raw = String(value ?? '').trim();
@@ -983,6 +1174,8 @@ export function clearPersistentCache(): void {
   try {
     localStorageStore.removeItem(ACTIVE_TABLE_KEY);
   } catch {}
+
+  tbdaLastSearchMemory.clear();
 
   for (const module of ACCESS_MODULES) {
     for (const key of [

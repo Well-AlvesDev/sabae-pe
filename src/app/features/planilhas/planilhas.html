@@ -41,7 +41,7 @@
         </div>
     </div>
     <div class="drawer-items">
-        <details class="drawer-submenu">
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
             <summary class="drawer-item">
                 <span class="material-icons">play_arrow</span>
                 <span>Operar</span>
@@ -64,7 +64,30 @@
             </div>
         </details>
         <button class="drawer-item" type="button" (click)="openStudentOperation('Visualizar aluno')"><span
-                class="material-icons">visibility</span>Visualizar Aluno</button>
+                class="material-icons">visibility</span>Visualizar Aluno<span
+                class="material-icons drawer-item-arrow">chevron_right</span></button>
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
+            <summary class="drawer-item">
+                <span class="material-icons">calculate</span>
+                <span>Funções</span>
+                <span class="material-icons drawer-submenu-arrow">expand_more</span>
+            </summary>
+            <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Criar função')">
+                    Criar função
+                </button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Visualizar funções')">
+                    <span>Visualizar Funções Ativas</span>
+                    <span class="function-badge">{{ getActiveFunctionCount() }}</span>
+                </button>
+                <button class="drawer-submenu-item delete-operation" type="button"
+                    (click)="openStudentOperation('Excluir função')">
+                    Excluir função
+                </button>
+            </div>
+        </details>
         <button class="drawer-item logout-button" type="button" (click)="logout()">
             <span class="material-icons">exit_to_app</span>
             Sair

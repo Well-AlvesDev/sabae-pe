@@ -300,6 +300,12 @@ body {
   color: #0c365c;
 }
 
+.drawer-item-arrow {
+  margin-left: auto;
+  margin-right: -2px;
+  font-size: 20px;
+}
+
 .drawer-item:hover,
 .drawer-item.logout-button:hover {
   background: rgba(12, 54, 92, 0.06);
@@ -338,7 +344,10 @@ body {
 }
 
 .drawer-submenu-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   padding: 10px 8px;
   border-left: 2px solid #d9e6f2;
@@ -356,12 +365,35 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
+.drawer-submenu-item > span:first-child {
+  flex: 1;
+}
+
+.function-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d92d20;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .drawer-submenu-item.alter-operation {
   border-left-color: #f2b705;
 }
 
 .drawer-submenu-item.add-student-operation {
   border-left-color: #34b447;
+}
+
+.drawer-submenu-item.delete-operation {
+  border-left-color: #d92d2d;
 }
 
 .drawer-submenu-item:hover,
