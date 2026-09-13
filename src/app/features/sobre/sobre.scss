@@ -7,6 +7,9 @@
 
 .about-page {
   padding: calc(72px + 24px) 20px 96px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 72px);
 }
 
 .about-hero {
@@ -18,55 +21,75 @@
 }
 
 .about-logo-wrap {
-  width: min(100%, 760px);
+  width: min(100%, 260px);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(244, 247, 251, 0.4));
   border-radius: 24px;
   padding: 12px 16px;
-  box-shadow: 0 10px 30px rgba(12, 54, 92, 0.08);
 }
 
 .about-logo {
   display: block;
   width: 100%;
-  max-width: 760px;
+  max-width: 260px;
   height: auto;
   border-radius: 20px;
 }
 
 .about-version {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 120px;
+  width: 100%;
   padding: 8px 16px;
-  border-radius: 999px;
-  background: #0c365c;
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 700;
+  border-radius: 0;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 500;
   letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.about-version-name {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  background: black;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .about-card {
   margin-top: 24px;
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(12, 54, 92, 0.08);
   padding: 24px 20px;
+}
+
+.about-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  display: flex;
+  justify-content: center;
 }
 
 .about-card h1 {
   margin: 0 0 12px;
-  color: #0c365c;
-  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  color: #1f1f1f;
+  font-size: 25px;
+  font-weight: 400;
+  text-align: center;
   line-height: 1.1;
 }
 
 .about-card p {
-  margin: 0;
+  margin: 0 auto;
   color: #334155;
-  font-size: 1rem;
+  font-size: 0.8rem;
   line-height: 1.7;
+  max-width: 600px;
+  text-align: center;
 }
 
 .about-grid {

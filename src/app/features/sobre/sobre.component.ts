@@ -16,7 +16,7 @@ import { getActiveModuleLabel, supabase, supabaseWithSessionStorage } from '../.
 })
 export class PerfilComponent implements OnInit {
   public readonly schoolName = getActiveModuleLabel();
-  public readonly appVersion = '0.0.0';
+  public readonly appVersion = '1.0.0';
   public userName = 'Obtendo usuário...';
   public userEmail = 'Obtendo e-mail...';
   public avatarInitial = 'U';
