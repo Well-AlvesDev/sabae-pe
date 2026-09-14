@@ -274,7 +274,7 @@ export type StudentOperationDialogData = {
                     <div class="function-summary-content">
                       <span class="function-result-name">{{ rule.name }}</span>
                       <span class="function-result-meta">
-                        {{ rule.studentName || 'Aluno não informado' }} • {{ formatDate(rule.startDate, 'Sem início') }} até {{ formatDate(rule.endDate, 'Sem fim') }}
+                        {{ rule.studentName || 'Aluno não informado' }} - {{ formatDate(rule.startDate, 'Sem início') }} até {{ formatDate(rule.endDate, 'Sem fim') }}
                       </span>
                     </div>
                     <mat-icon>{{ isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</mat-icon>
@@ -333,7 +333,7 @@ export type StudentOperationDialogData = {
                     <div class="function-summary-content">
                       <span class="function-result-name">{{ rule.name }}</span>
                       <span class="function-result-meta">
-                        {{ rule.studentName || 'Aluno não informado' }} • {{ formatDate(rule.startDate, 'Sem início') }} até {{ formatDate(rule.endDate, 'Sem fim') }}
+                        {{ rule.studentName || 'Aluno não informado' }} - {{ formatDate(rule.startDate, 'Sem início') }} até {{ formatDate(rule.endDate, 'Sem fim') }}
                       </span>
                     </div>
                     <mat-icon>{{ isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down' }}</mat-icon>
@@ -450,22 +450,22 @@ export type StudentOperationDialogData = {
     .rule-field { flex: 1; }
     .function-results { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; padding: 0; border: 1px solid #dfeaf5; border-radius: 12px; background: #f7fafc; }
     .function-card-list { display: flex; flex-direction: column; gap: 10px; }
-    .function-card { display: flex; flex-direction: column; border: 1px solid #dfeaf5; border-radius: 14px; background: #f7fafc; overflow: hidden; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-    .function-card.is-expanded { border-color: #8ecae6; box-shadow: 0 0 0 1px rgba(142, 202, 230, 0.2); }
+    .function-card { display: flex; flex-direction: column; border: 1px solid #dfeaf5; border-radius: 14px; background: #ffffff; overflow: hidden; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .function-card.is-expanded { border-color: #5f5f5f; box-shadow: 0 0 0 1px rgba(142, 202, 230, 0.2); }
     .function-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 14px 16px; border: 0; background: transparent; color: #263746; cursor: pointer; text-align: left; }
-    .function-summary:hover, .function-summary:focus-visible { background: rgba(12, 54, 92, 0.03); }
+    .function-summary:hover, .function-summary:focus-visible { background: rgba(60, 60, 60, 0.03); }
     .function-summary-content { display: flex; flex: 1; flex-direction: column; gap: 2px; }
     .function-result-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #e6edf4; }
     .function-result-row:last-child { border-bottom: 0; }
     .function-result { display: flex; flex: 1; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 10px 12px; border: 0; background: transparent; color: #263746; cursor: pointer; text-align: left; }
     .function-result:hover, .function-result:focus-visible { background: rgba(12, 54, 92, 0.06); }
     .function-result-name { font-weight: 700; }
-    .function-result-meta { color: #64748b; font-size: 0.8rem; }
+    .function-result-meta { color: #383838; font-size: 0.8rem; }
     .delete-function-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-right: 8px; padding: 8px 10px; border: 0; border-radius: 8px; background: #fee2e2; color: #b42318; cursor: pointer; font-weight: 700; }
     .delete-function-button mat-icon { font-size: 18px; }
     .function-list-view { display: flex; flex-direction: column; gap: 12px; }
-    .function-detail-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; border-top: 1px solid #dfeaf5; background: #f8fbff; }
-    .function-detail-card p { margin: 0; color: #475467; font-size: 0.9rem; }
+    .function-detail-card { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; border-top: 1px solid #404040; background: #ffffff; }
+    .function-detail-card p { margin: 0; color: #2a2a2a; font-size: 0.9rem; }
     .date-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .function-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
     .small-state { min-height: 60px; }
