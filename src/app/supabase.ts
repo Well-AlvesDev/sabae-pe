@@ -51,7 +51,6 @@ const localStorageStore = createSafeStorage('localStorage');
 const sessionStorageStore = createSafeStorage('sessionStorage');
 const tbdaLastSearchMemory = new Map<string, string>();
 
-const CACHE_DB_NAME = 'sabae-cache';
 const CACHE_DB_STORE = 'cache-items';
 const INDEXED_DB_CACHE_KEYS = [
   'sabae.tbda.last-search.',
@@ -67,15 +66,26 @@ function getIndexedDbFactory(): IDBFactory | undefined {
   return (globalThis as typeof globalThis & { indexedDB?: IDBFactory }).indexedDB;
 }
 
-function openCacheDb(): Promise<IDBDatabase | null> {
-  return new Promise(resolve => {
-    const indexedDb = getIndexedDbFactory();
-    if (!indexedDb) {
-      resolve(null);
-      return;
-    }
+function getCacheDbName(tableName = getActiveTable()): string {
+  return `sabae-cache-${tableName.toLowerCase()}`;
+}
 
-    const request = indexedDb.open(CACHE_DB_NAME, 1);
+async function openCacheDb(tableName = getActiveTable(), createIfMissing = true): Promise<IDBDatabase | null> {
+  const indexedDb = getIndexedDbFactory();
+  if (!indexedDb) {
+    return null;
+  }
+
+  if (!createIfMissing && typeof indexedDb.databases === 'function') {
+    const databaseName = getCacheDbName(tableName);
+    const databases = await indexedDb.databases();
+    if (!databases.some(database => database.name === databaseName)) {
+      return null;
+    }
+  }
+
+  return new Promise(resolve => {
+    const request = indexedDb.open(getCacheDbName(tableName), 1);
 
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -100,7 +110,7 @@ async function writeIndexedDbCacheValue(key: string, value: string): Promise<voi
     return;
   }
 
-  const db = await openCacheDb();
+  const db = await openCacheDb(getTableNameFromCacheKey(key));
   if (!db) {
     return;
   }
@@ -126,7 +136,7 @@ async function removeIndexedDbCacheValue(key: string): Promise<void> {
     return;
   }
 
-  const db = await openCacheDb();
+  const db = await openCacheDb(getTableNameFromCacheKey(key), false);
   if (!db) {
     return;
   }
@@ -152,7 +162,7 @@ async function readIndexedDbCacheValue(key: string): Promise<string | null> {
     return null;
   }
 
-  const db = await openCacheDb();
+  const db = await openCacheDb(getTableNameFromCacheKey(key), false);
   if (!db) {
     return null;
   }
@@ -179,6 +189,11 @@ function persistLocalStorageCacheValue(key: string, value: string): void {
   void writeIndexedDbCacheValue(key, value);
 }
 
+function getTableNameFromCacheKey(key: string): string {
+  const module = ACCESS_MODULES.find(item => key.endsWith(`.${item.table}`));
+  return module?.table ?? getActiveTable();
+}
+
 function removeLocalStorageCacheValue(key: string): void {
   try {
     localStorageStore.removeItem(key);
@@ -187,19 +202,26 @@ function removeLocalStorageCacheValue(key: string): void {
   void removeIndexedDbCacheValue(key);
 }
 
-async function hydrateLocalStorageCacheFromIndexedDb(): Promise<void> {
+export async function hydrateActiveModuleCaches(): Promise<void> {
   if (typeof window === 'undefined') {
     return;
   }
 
+  const activeTable = getActiveTable();
+  tbdaCacheMemory = undefined;
+  attendanceCacheMemory = null;
+  attendanceCacheCount.set(0);
+
   const cacheKeys = new Set<string>();
-  for (const module of ACCESS_MODULES) {
-    for (const prefix of ['sabae.tbda.cache.', 'sabae.attendance.cache.', 'sabae.tbda.last-search.']) {
-      cacheKeys.add(`${prefix}${module.table}`);
-    }
+  for (const prefix of ['sabae.tbda.cache.', 'sabae.attendance.cache.', 'sabae.tbda.last-search.']) {
+    cacheKeys.add(`${prefix}${activeTable}`);
   }
 
   for (const key of cacheKeys) {
+    if (getActiveTable() !== activeTable) {
+      return;
+    }
+
     const value = await readIndexedDbCacheValue(key);
     if (!value) {
       continue;
@@ -228,10 +250,17 @@ async function hydrateLocalStorageCacheFromIndexedDb(): Promise<void> {
       tbdaLastSearchMemory.set(key, value);
     }
 
-    try {
-      localStorageStore.removeItem(key);
-    } catch {}
+    if (getActiveTable() === activeTable) {
+      try {
+        localStorageStore.removeItem(key);
+      } catch {}
+    }
   }
+}
+
+export async function prepareActiveModuleCaches(): Promise<void> {
+  await migrateLocalStorageCacheToIndexedDb();
+  await hydrateActiveModuleCaches();
 }
 
 async function migrateLocalStorageCacheToIndexedDb(): Promise<void> {
@@ -239,11 +268,10 @@ async function migrateLocalStorageCacheToIndexedDb(): Promise<void> {
     return;
   }
 
+  const activeTable = getActiveTable();
   const cacheKeys = new Set<string>();
-  for (const module of ACCESS_MODULES) {
-    for (const prefix of ['sabae.tbda.cache.', 'sabae.attendance.cache.', 'sabae.tbda.last-search.']) {
-      cacheKeys.add(`${prefix}${module.table}`);
-    }
+  for (const prefix of ['sabae.tbda.cache.', 'sabae.attendance.cache.', 'sabae.tbda.last-search.']) {
+    cacheKeys.add(`${prefix}${activeTable}`);
   }
 
   for (const key of cacheKeys) {
@@ -293,6 +321,7 @@ export function setActiveTable(tableName: string): void {
   }
 
   localStorageStore.setItem(ACTIVE_TABLE_KEY, module.table);
+  tbdaCacheMemory = undefined;
   attendanceCacheMemory = null;
   refreshAttendanceCacheCount();
 }
@@ -353,15 +382,17 @@ function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
   }).format(date);
 }
 
-function persistTbdaCache(payload: TbdaCachePayload): void {
-  tbdaCacheMemory = payload.data;
+function persistTbdaCache(payload: TbdaCachePayload, tableName = getActiveTable()): void {
+  if (getActiveTable() === tableName) {
+    tbdaCacheMemory = payload.data;
+  }
 
-  persistLocalStorageCacheValue(getTbdaCacheKey(), JSON.stringify(payload));
+  persistLocalStorageCacheValue(`sabae.tbda.cache.${tableName}`, JSON.stringify(payload));
 }
 
-export function setTbdaLastSearchLabel(value: number | Date = Date.now()): string {
+export function setTbdaLastSearchLabel(value: number | Date = Date.now(), tableName = getActiveTable()): string {
   const formatted = formatSaoPauloDateTime(value);
-  const key = getTbdaLastSearchKey();
+  const key = `sabae.tbda.last-search.${tableName}`;
   tbdaLastSearchMemory.set(key, formatted);
   persistLocalStorageCacheValue(key, formatted);
   return formatted;
@@ -385,9 +416,10 @@ export async function syncTbdaCache(
   useSessionStorage = false,
   validateRows?: (rows: Record<string, unknown>[]) => boolean,
 ): Promise<Record<string, unknown>[]> {
+  const tableName = getActiveTable();
   const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
   const result = await client
-    .from(getActiveTable())
+    .from(tableName)
     .select(TBDA_SELECT);
 
   if (result.error) {
@@ -409,8 +441,8 @@ export async function syncTbdaCache(
     data: rows,
   };
 
-  persistTbdaCache(payload);
-  setTbdaLastSearchLabel(requestedAt);
+  persistTbdaCache(payload, tableName);
+  setTbdaLastSearchLabel(requestedAt, tableName);
   return rows;
 }
 
@@ -1590,6 +1622,4 @@ export const supabaseWithSessionStorage = createClient(
   }
 );
 
-void hydrateLocalStorageCacheFromIndexedDb();
-void migrateLocalStorageCacheToIndexedDb();
 refreshAttendanceCacheCount();

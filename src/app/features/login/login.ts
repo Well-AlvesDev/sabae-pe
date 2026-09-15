@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { ACCESS_MODULES, setActiveTable, supabase, supabaseWithSessionStorage, unlockAttendanceCache, unlockTbdaCache } from '../../supabase';
+import { ACCESS_MODULES, prepareActiveModuleCaches, setActiveTable, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
   selector: 'app-login',
@@ -94,8 +94,7 @@ export class LoginComponent implements OnInit {
 
       if (hasSession) {
         try {
-          await unlockAttendanceCache();
-          await unlockTbdaCache();
+          await prepareActiveModuleCaches();
           await this.router.navigateByUrl('/home');
         } catch (securityError) {
           console.error('Cache setup failed', securityError);
@@ -187,8 +186,7 @@ export class LoginComponent implements OnInit {
       }
 
       try {
-        await unlockAttendanceCache();
-        await unlockTbdaCache();
+        await prepareActiveModuleCaches();
       } catch (securityError) {
         console.error('Cache setup failed', securityError);
         await client.auth.signOut();
