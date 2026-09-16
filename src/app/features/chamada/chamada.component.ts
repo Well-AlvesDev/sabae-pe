@@ -100,11 +100,11 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
-    await hydrateStudentFunctionRulesFromIndexedDb();
-    await prepareActiveModuleCaches();
-    this.loadSavedAttendances();
-
     try {
+      await hydrateStudentFunctionRulesFromIndexedDb();
+      await prepareActiveModuleCaches();
+      this.loadSavedAttendances();
+
       const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
         supabase.auth.getSession(),
         supabaseWithSessionStorage.auth.getSession(),

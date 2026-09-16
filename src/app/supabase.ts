@@ -186,6 +186,10 @@ async function readIndexedDbCacheValue(key: string): Promise<string | null> {
 }
 
 function persistLocalStorageCacheValue(key: string, value: string): void {
+  try {
+    localStorageStore.setItem(key, value);
+  } catch {}
+
   void writeIndexedDbCacheValue(key, value);
 }
 
@@ -222,7 +226,12 @@ export async function hydrateActiveModuleCaches(): Promise<void> {
       return;
     }
 
-    const value = await readIndexedDbCacheValue(key);
+    let value = await readIndexedDbCacheValue(key);
+    if (!value) {
+      await new Promise(resolve => setTimeout(resolve, 120));
+      value = await readIndexedDbCacheValue(key);
+    }
+    value ??= localStorageStore.getItem(key);
     if (!value) {
       continue;
     }
@@ -250,11 +259,6 @@ export async function hydrateActiveModuleCaches(): Promise<void> {
       tbdaLastSearchMemory.set(key, value);
     }
 
-    if (getActiveTable() === activeTable) {
-      try {
-        localStorageStore.removeItem(key);
-      } catch {}
-    }
   }
 }
 
