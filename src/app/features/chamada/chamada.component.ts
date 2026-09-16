@@ -23,6 +23,7 @@ import {
   getTbdaClassrooms,
   normalizeAttendanceMonth,
   removeAttendanceCacheEntry,
+  prepareActiveModuleCaches,
   saveAttendanceCacheEntry,
   sendAttendanceCacheToTbda,
   syncTbdaCache,
@@ -100,6 +101,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     await hydrateStudentFunctionRulesFromIndexedDb();
+    await prepareActiveModuleCaches();
     this.loadSavedAttendances();
 
     try {
