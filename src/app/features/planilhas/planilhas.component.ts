@@ -217,13 +217,14 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
       };
       const XLSX = xlsxModule.default ?? xlsxModule;
       const month = normalizeAttendanceMonth(this.selectedMonth);
-      const requestedRegistrations = this.getRequestedRegistrations();
+      const requestedOrder = this.getRequestedRegistrationOrder();
+      const requestedRegistrations = requestedOrder.filter(Boolean);
       const filteredRows = this.tbdaRows
         .filter(row => this.matchesShift(this.getRowText(row, 'TURNO'), this.selectedShift))
         .filter(row => !this.selectedRoom || this.matchesText(this.getRowText(row, 'TURMA'), this.selectedRoom))
         .filter(row => !requestedRegistrations.length || requestedRegistrations.includes(this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula')))
         .map(row => this.createReportRow(row, month));
-      const orderedRows = this.orderRowsByRegistration(filteredRows);
+      const orderedRows = this.orderRowsByRegistration(filteredRows, requestedOrder);
       const headers = ['MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', ...this.days];
       const worksheet = XLSX.utils.aoa_to_sheet([
         headers,
@@ -353,26 +354,36 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     return reportRow;
   }
 
-  private orderRowsByRegistration(rows: ReportRow[]): ReportRow[] {
-    const requestedOrder = this.getRequestedRegistrations();
+  private orderRowsByRegistration(rows: ReportRow[], requestedOrder = this.getRequestedRegistrationOrder()): ReportRow[] {
+    const hasRequestedOrder = requestedOrder.some(Boolean);
 
-    if (!requestedOrder.length) {
+    if (!hasRequestedOrder) {
       return rows.sort((a, b) => a['TURMA'].localeCompare(b['TURMA'], 'pt-BR') || a['NOME'].localeCompare(b['NOME'], 'pt-BR'));
     }
 
-    const order = new Map(requestedOrder.map((registration, index) => [registration, index]));
-    return rows.sort((a, b) => {
-      const positionA = order.get(a['MATRÍCULA']) ?? Number.MAX_SAFE_INTEGER;
-      const positionB = order.get(b['MATRÍCULA']) ?? Number.MAX_SAFE_INTEGER;
-      return positionA - positionB || a['NOME'].localeCompare(b['NOME'], 'pt-BR');
+    const rowsByRegistration = new Map<string, ReportRow[]>();
+    for (const row of rows) {
+      const matchingRows = rowsByRegistration.get(row['MATRÍCULA']) ?? [];
+      matchingRows.push(row);
+      rowsByRegistration.set(row['MATRÍCULA'], matchingRows);
+    }
+
+    return requestedOrder.flatMap(registration => {
+      if (!registration || !rowsByRegistration.has(registration)) {
+        return [this.createEmptyReportRow()];
+      }
+      return rowsByRegistration.get(registration) ?? [];
     });
   }
 
-  private getRequestedRegistrations(): string[] {
+  private getRequestedRegistrationOrder(): string[] {
     return this.registrations
       .split(/\r?\n/)
-      .map(registration => registration.trim())
-      .filter(Boolean);
+      .map(registration => registration.trim());
+  }
+
+  private createEmptyReportRow(): ReportRow {
+    return Object.fromEntries(['MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', ...this.days].map(header => [header, '']));
   }
 
   private matchesShift(rowShift: string, selectedShift: string): boolean {
