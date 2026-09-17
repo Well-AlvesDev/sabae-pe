@@ -23,7 +23,7 @@ import {
 })
 export class PerfilComponent implements OnInit {
   public readonly schoolName = getActiveModuleLabel();
-  public readonly appVersion = '1.0.5';
+  public readonly appVersion = '1.1.0';
   public readonly savedAttendanceCount = savedAttendanceCount;
   public userName = 'Obtendo usuário...';
   public userEmail = 'Obtendo e-mail...';
