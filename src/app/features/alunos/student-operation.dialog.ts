@@ -574,6 +574,22 @@ export class StudentOperationDialogComponent {
         classroom: this.newStudent.classroom,
         shift: this.newStudent.shift,
       });
+      this.dialogRef.afterClosed().subscribe(() => {
+        this.dialog.open(StudentOperationSuccessDialogComponent, {
+          data: {
+            student: {
+              name: this.newStudent.name.trim(),
+              registration: this.newStudent.registration.trim(),
+              room: this.newStudent.classroom.trim(),
+              shift: this.newStudent.shift.trim(),
+              status: 'Matriculado',
+            },
+            message: 'Aluno cadastrado com sucesso.',
+          },
+          autoFocus: false,
+          maxWidth: 'calc(100vw - 32px)',
+        });
+      });
       this.dialogRef.close(true);
     } catch (error) {
       this.registrationError.set(error instanceof Error ? error.message : 'Não foi possível inserir o aluno.');
@@ -666,42 +682,42 @@ export class StudentOperationDialogComponent {
     }
 
     if (this.data.operation === 'Alterar Status do Aluno') {
-      this.dialog.open(StudentTransferStatusDialogComponent, {
+      const dialogRef = this.dialog.open(StudentTransferStatusDialogComponent, {
         data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      this.dialogRef.close();
+      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar Turma do Aluno') {
-      this.dialog.open(StudentClassroomDialogComponent, {
+      const dialogRef = this.dialog.open(StudentClassroomDialogComponent, {
         data: { student, classrooms: this.classrooms() },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      this.dialogRef.close();
+      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar Nome do Aluno') {
-      this.dialog.open(StudentNameDialogComponent, {
+      const dialogRef = this.dialog.open(StudentNameDialogComponent, {
         data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      this.dialogRef.close();
+      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar turno') {
-      this.dialog.open(StudentShiftDialogComponent, {
+      const dialogRef = this.dialog.open(StudentShiftDialogComponent, {
         data: { student, shifts: this.shifts() },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      this.dialogRef.close();
+      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
@@ -1395,8 +1411,9 @@ export class StudentShiftDialogComponent {
 
 type StudentOperationSuccessDialogData = {
   student: StudentSearchItem;
-  label: string;
-  value: string;
+  label?: string;
+  value?: string;
+  message?: string;
 };
 
 @Component({
@@ -1406,7 +1423,7 @@ type StudentOperationSuccessDialogData = {
     <section class="success-dialog" aria-labelledby="success-dialog-title">
       <mat-icon class="success-icon" aria-hidden="true">check_circle</mat-icon>
       <h2 id="success-dialog-title">Operação concluída</h2>
-      <p>{{ data.student.name }} agora está com {{ data.label }} <strong>{{ data.value }}</strong>.</p>
+      <p>{{ data.message || data.student.name + ' agora está com ' + data.label + ' ' }}<strong>{{ data.message ? '' : data.value }}</strong>{{ data.message ? '' : '.' }}</p>
       <button mat-flat-button class="success-button" type="button" mat-dialog-close>Entendido!</button>
     </section>
   `,

@@ -8,6 +8,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { take } from 'rxjs';
 import { attendanceCacheCount as savedAttendanceCount, ensureTbdaCache, getActiveModuleLabel, getActiveStudentFunctionRules, hydrateStudentFunctionRulesFromIndexedDb, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 import { type StudentOperation } from './student-operation.dialog';
@@ -178,11 +179,27 @@ export class AlunosComponent implements OnInit, OnDestroy {
   public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
     const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
-    this.dialog.open(StudentOperationDialogComponent, {
+    const dialogRef = this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,
       maxWidth: 'calc(100vw - 20px)',
     });
+    dialogRef.afterClosed().pipe(take(1)).subscribe(result => {
+      if (result === true) {
+        void this.reloadStudentsFromCache();
+      }
+    });
+  }
+
+  private async reloadStudentsFromCache(): Promise<void> {
+    try {
+      this.rows = await ensureTbdaCache();
+      this.rooms.set(Array.from(new Set(this.rows.map(row => this.getValue(row, 'TURMA')).filter(Boolean)))
+        .sort((first, second) => first.localeCompare(second, 'pt-BR', { numeric: true })));
+      this.updateStudents();
+    } catch {
+      this.hasError.set(true);
+    }
   }
 
   public async logout(): Promise<void> {

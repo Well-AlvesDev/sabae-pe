@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
+import { take } from 'rxjs';
 import type { User } from '@supabase/supabase-js';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
 import { SessionConflictService } from '../../session-conflict.service';
@@ -171,11 +172,28 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
     const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
-    this.dialog.open(StudentOperationDialogComponent, {
+    const dialogRef = this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,
       maxWidth: 'calc(100vw - 20px)',
     });
+    dialogRef.afterClosed().pipe(take(1)).subscribe(result => {
+      if (result === true) {
+        void this.reloadTbdaRows();
+      }
+    });
+  }
+
+  private async reloadTbdaRows(): Promise<void> {
+    try {
+      const rows = await ensureTbdaCache();
+      this.tbdaRows = rows;
+      this.rooms = getTbdaClassrooms(rows);
+      this.shifts = getTbdaShifts(rows);
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('[planilhas] failed to reload student operation data', error);
+    }
   }
 
   public async logout(): Promise<void> {

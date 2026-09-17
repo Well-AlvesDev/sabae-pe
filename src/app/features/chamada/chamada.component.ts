@@ -218,15 +218,28 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public async openStudentOperation(operation: StudentOperation): Promise<void> {
     this.closeMenu();
     const StudentOperationDialogComponent = await this.studentOperationDialogComponentPromise;
-    this.dialog.open(StudentOperationDialogComponent, {
+    const dialogRef = this.dialog.open(StudentOperationDialogComponent, {
       data: { operation },
       autoFocus: false,
       maxWidth: 'calc(100vw - 20px)',
     });
-    this.dialog.afterAllClosed.pipe(take(1)).subscribe(() => {
-      this.loadSavedAttendances();
-      this.cdr.detectChanges();
+    dialogRef.afterClosed().pipe(take(1)).subscribe(result => {
+      if (result === true) {
+        this.loadSavedAttendances();
+        void this.reloadStudentOperationData();
+        this.cdr.detectChanges();
+      }
     });
+  }
+
+  private async reloadStudentOperationData(): Promise<void> {
+    try {
+      this.tbdaRows = await ensureTbdaCache(this.useSessionStorageForTbdaCache);
+      this.rooms = getTbdaClassrooms(this.tbdaRows);
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('[chamada] failed to reload student operation data', error);
+    }
   }
 
   public openAttendanceModal(): void {

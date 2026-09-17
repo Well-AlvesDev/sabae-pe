@@ -316,6 +316,21 @@ function persistAttendanceCache(entries: AttendanceCacheEntry[]): void {
   persistLocalStorageCacheValue(getAttendanceCacheKey(), JSON.stringify(entries));
 }
 
+async function persistActiveModuleCachesToIndexedDb(): Promise<void> {
+  const activeTable = getActiveTable();
+  const cacheKeys = [
+    `sabae.tbda.cache.${activeTable}`,
+    `sabae.attendance.cache.${activeTable}`,
+  ];
+
+  await Promise.all(cacheKeys.map(async key => {
+    const value = localStorageStore.getItem(key);
+    if (value) {
+      await writeIndexedDbCacheValue(key, value);
+    }
+  }));
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', event => {
     if (event.key === ACTIVE_TABLE_KEY || event.key?.startsWith('sabae.attendance.cache.')) {
@@ -1241,6 +1256,8 @@ export type NewStudentInput = {
 };
 
 export async function insertStudent(input: NewStudentInput): Promise<void> {
+  await hydrateActiveModuleCaches();
+
   const name = String(input.name ?? '').trim();
   const registration = String(input.registration ?? '').trim();
   const classroom = String(input.classroom ?? '').trim();
@@ -1272,6 +1289,7 @@ export async function insertStudent(input: NewStudentInput): Promise<void> {
   const refreshedRows = await syncTbdaCache();
   addStudentAsPresentToAttendanceCache({ name, registration, classroom, shift }, refreshedRows);
   refreshAttendanceCacheFromTbda(refreshedRows);
+  await persistActiveModuleCachesToIndexedDb();
 }
 
 function refreshAttendanceCacheFromTbda(rows: Record<string, unknown>[]): void {
@@ -1301,6 +1319,8 @@ export async function updateStudentStatus(
   name: string,
   status: StudentAdministrativeStatus,
 ): Promise<void> {
+  await hydrateActiveModuleCaches();
+
   const normalizedRegistration = String(registration ?? '').trim();
   const normalizedName = String(name ?? '').trim();
   if (!normalizedRegistration && !normalizedName) {
@@ -1346,6 +1366,7 @@ export async function updateStudentStatus(
     ),
   }));
   persistAttendanceCache(updatedEntries);
+  await persistActiveModuleCachesToIndexedDb();
 }
 
 export async function updateStudentClassroom(
@@ -1353,6 +1374,8 @@ export async function updateStudentClassroom(
   name: string,
   classroom: string,
 ): Promise<void> {
+  await hydrateActiveModuleCaches();
+
   const normalizedRegistration = String(registration ?? '').trim();
   const normalizedName = String(name ?? '').trim();
   const normalizedClassroom = String(classroom ?? '').trim();
@@ -1455,6 +1478,7 @@ export async function updateStudentClassroom(
     .filter(entry => entry.students.length > 0);
 
   persistAttendanceCache(updatedEntries);
+  await persistActiveModuleCachesToIndexedDb();
 }
 
 type ClassroomAttendanceCell = {
@@ -1519,6 +1543,8 @@ export async function updateStudentShift(
   name: string,
   shift: string,
 ): Promise<void> {
+  await hydrateActiveModuleCaches();
+
   const normalizedRegistration = String(registration ?? '').trim();
   const normalizedName = String(name ?? '').trim();
   const normalizedShift = String(shift ?? '').trim();
@@ -1554,6 +1580,7 @@ export async function updateStudentShift(
     ),
   }));
   persistAttendanceCache(updatedEntries);
+  await persistActiveModuleCachesToIndexedDb();
 }
 
 export async function updateStudentName(
@@ -1561,6 +1588,8 @@ export async function updateStudentName(
   currentName: string,
   newName: string,
 ): Promise<void> {
+  await hydrateActiveModuleCaches();
+
   const normalizedRegistration = String(registration ?? '').trim();
   const normalizedCurrentName = String(currentName ?? '').trim();
   const normalizedNewName = String(newName ?? '').trim();
@@ -1596,6 +1625,7 @@ export async function updateStudentName(
     ),
   }));
   persistAttendanceCache(updatedEntries);
+  await persistActiveModuleCachesToIndexedDb();
 }
 
 function matchesStudent(row: Record<string, unknown>, registration: string, name: string): boolean {
