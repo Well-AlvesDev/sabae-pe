@@ -218,7 +218,7 @@ GRANT EXECUTE ON FUNCTION public.backfill_student_attendance(TEXT, TEXT, TEXT) T
 -- Exemplos:
 --   'FJ:8, FNJ:'  -> 'FJ:8'
 --   'FNJ:4, FNJ:4' -> 'FNJ:4'
---   'P:3, FJ:3' -> 'P:3, FJ:3' (mesmo mes, mas status diferente: preserva ambos)
+--   'P:3, FJ:3' -> 'FJ:3' (um unico status por mes; o ultimo token valido prevalece)
 CREATE OR REPLACE FUNCTION public.normalize_attendance_value(
   p_value TEXT
 )
@@ -230,6 +230,8 @@ DECLARE
   v_token TEXT;
   v_status TEXT;
   v_month INT;
+  v_index INT;
+  v_months INT[] := ARRAY[]::INT[];
   v_normalized TEXT[] := ARRAY[]::TEXT[];
 BEGIN
   IF p_value IS NULL OR btrim(p_value) = '' THEN
@@ -246,9 +248,13 @@ BEGIN
       CONTINUE;
     END IF;
 
-    -- Mantem a primeira ocorrencia exata e descarta apenas a duplicata.
-    IF NOT (v_status || ':' || v_month::TEXT = ANY(v_normalized)) THEN
+    -- Mantem exatamente um status por mes; o ultimo token valido prevalece.
+    v_index := array_position(v_months, v_month);
+    IF v_index IS NULL THEN
+      v_months := array_append(v_months, v_month);
       v_normalized := array_append(v_normalized, v_status || ':' || v_month::TEXT);
+    ELSE
+      v_normalized[v_index] := v_status || ':' || v_month::TEXT;
     END IF;
   END LOOP;
 

@@ -267,6 +267,11 @@ export async function prepareActiveModuleCaches(): Promise<void> {
   await hydrateActiveModuleCaches();
 }
 
+export async function refreshActiveModuleCaches(useSessionStorage = false): Promise<void> {
+  await prepareActiveModuleCaches();
+  await syncTbdaCache(useSessionStorage);
+}
+
 async function migrateLocalStorageCacheToIndexedDb(): Promise<void> {
   if (typeof window === 'undefined') {
     return;
@@ -290,7 +295,8 @@ async function migrateLocalStorageCacheToIndexedDb(): Promise<void> {
 
 export const ACCESS_MODULES = [
   { label: 'ESCOLA DOM BOSCO', table: 'DOMBOSCO' },
-  { label: 'ESCOLA LUIZ IGNACIO', table: 'USINA' },
+  { label: 'EREFEM Cel LUIZ IGNÁCIO', table: 'USINA' },
+  {label: 'ETE MIGUEL ARRAES DE ALENCAR', table: 'ETEMIGUELARRAES'},
 ] as const;
 
 export type AccessModule = typeof ACCESS_MODULES[number];
