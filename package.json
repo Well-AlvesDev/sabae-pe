@@ -1,10 +1,11 @@
 {
   "name": "sabae-pe",
-  "version": "0.0.0",
+  "version": "1.2.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "version:auto": "node scripts/bump-app-version.mjs",
     "vercel-build": "ng build --configuration production --progress=false",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"

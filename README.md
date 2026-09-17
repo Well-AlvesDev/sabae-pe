@@ -81,6 +81,16 @@ npm run build
 npm test
 ```
 
+### Atualizar a versão automaticamente
+
+Após concluir uma mudança, execute:
+
+```bash
+npm run version:auto
+```
+
+O comando analisa o diff atual e atualiza `package.json`, `package-lock.json` e a versão exibida na tela Sobre. Por padrão, até 49 linhas alteradas geram `patch`, de 50 a 499 geram `minor`, e 500 ou mais geram `major`. É possível informar `--patch`, `--minor` ou `--major` quando o impacto da mudança não corresponder ao tamanho do diff.
+
 ## Publicar na Hostinger Business
 
 1. Gere a versão de produção:

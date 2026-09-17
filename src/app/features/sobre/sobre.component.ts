@@ -13,6 +13,7 @@ import {
   supabase,
   supabaseWithSessionStorage,
 } from '../../supabase';
+import { APP_VERSION } from '../../app-version';
 
 @Component({
   selector: 'app-perfil',
@@ -23,7 +24,7 @@ import {
 })
 export class PerfilComponent implements OnInit {
   public readonly schoolName = getActiveModuleLabel();
-  public readonly appVersion = '1.1.2';
+  public readonly appVersion = APP_VERSION;
   public readonly savedAttendanceCount = savedAttendanceCount;
   public userName = 'Obtendo usuário...';
   public userEmail = 'Obtendo e-mail...';

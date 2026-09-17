@@ -29,19 +29,8 @@ SECURITY DEFINER
 AS $$
 DECLARE
   v_result JSONB := '{"success": 0, "failed": 0, "errors": []}';
-  v_success INT := 0;
-  v_failed INT := 0;
-  v_errors TEXT[] := ARRAY[]::TEXT[];
-  v_item JSONB;
-  v_mat TEXT;
-  v_dia INT;
-  v_mes INT;
-  v_presenca TEXT;
-  v_nome TEXT;
+  v_day INT;
   v_day_column TEXT;
-  v_existing_value TEXT;
-  v_new_value TEXT;
-  v_update_result INT;
 BEGIN
   table_name := btrim(table_name);
 
@@ -58,92 +47,133 @@ BEGIN
     RETURN v_result;
   END IF;
 
-  -- Processar cada registro de attendance
-  FOR v_item IN
-    SELECT jsonb_array_elements(attendance_data)
+  CREATE TEMP TABLE tmp_attendance_batch (
+    item_id BIGINT GENERATED ALWAYS AS IDENTITY,
+    mat TEXT,
+    dia INT,
+    mes INT,
+    presenca TEXT,
+    nome TEXT,
+    valido BOOLEAN NOT NULL DEFAULT TRUE,
+    encontrado BOOLEAN NOT NULL DEFAULT FALSE,
+    erro TEXT
+  ) ON COMMIT DROP;
+
+  -- Converter o JSON em linhas uma única vez, antes de acessar a tabela de alunos.
+  INSERT INTO tmp_attendance_batch (mat, dia, mes, presenca, nome)
+  SELECT
+    NULLIF(BTRIM(registro.mat), ''),
+    NULLIF(BTRIM(registro.dia), '')::INT,
+    NULLIF(BTRIM(registro.mes), '')::INT,
+    NULLIF(BTRIM(registro.presenca), ''),
+    NULLIF(BTRIM(registro.nome), '')
+  FROM jsonb_to_recordset(attendance_data) AS registro(
+    mat TEXT,
+    dia TEXT,
+    mes TEXT,
+    presenca TEXT,
+    nome TEXT
+  );
+
+  -- Manter a validação e as mensagens compatíveis com a RPC anterior.
+  UPDATE tmp_attendance_batch
+  SET
+    valido = FALSE,
+    erro = CASE
+      WHEN mat IS NULL OR dia IS NULL OR mes IS NULL OR presenca IS NULL
+        THEN 'Aluno inválido: matrícula, dia, mês ou presença ausentes.'
+      WHEN dia < 1 OR dia > 31
+        THEN 'Dia inválido: ' || dia::TEXT
+      WHEN mes < 1 OR mes > 12
+        THEN 'Mês inválido: ' || mes::TEXT
+      ELSE NULL
+    END
+  WHERE mat IS NULL
+     OR dia IS NULL
+     OR mes IS NULL
+     OR presenca IS NULL
+     OR dia NOT BETWEEN 1 AND 31
+     OR mes NOT BETWEEN 1 AND 12;
+
+  -- O modelo atual ainda possui uma coluna por dia. A consulta é agrupada por
+  -- dia para fazer um UPDATE em lote por coluna, em vez de um por aluno.
+  FOR v_day IN
+    SELECT DISTINCT dia
+    FROM tmp_attendance_batch
+    WHERE valido
+    ORDER BY dia
   LOOP
-    -- Extrair dados do item
-    v_mat := NULLIF(TRIM(v_item->>'mat'), '');
-    v_dia := (v_item->>'dia')::INT;
-    v_mes := (v_item->>'mes')::INT;
-    v_presenca := v_item->>'presenca';
-    v_nome := v_item->>'nome';
+    v_day_column := v_day::TEXT;
 
-    -- Validar dados obrigatórios
-    IF v_mat IS NULL OR v_dia IS NULL OR v_mes IS NULL OR v_presenca IS NULL THEN
-      v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Aluno inválido: matrícula, dia, mês ou presença ausentes.');
-      CONTINUE;
-    END IF;
-
-    -- Validar formato de dia
-    IF v_dia < 1 OR v_dia > 31 THEN
-      v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Dia inválido: ' || v_dia::TEXT);
-      CONTINUE;
-    END IF;
-
-    -- Validar formato de mês
-    IF v_mes < 1 OR v_mes > 12 THEN
-      v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Mês inválido: ' || v_mes::TEXT);
-      CONTINUE;
-    END IF;
-
-    v_day_column := v_dia::TEXT;
-
-    -- Buscar valor existente
     EXECUTE format(
-      'SELECT COALESCE(NULLIF(%I::TEXT, ''''), '''') FROM public.%I WHERE TRIM("MAT"::TEXT) = $1 LIMIT 1',
+      'WITH valores AS (
+         SELECT
+           lote.item_id,
+           lote.mat,
+           lote.mes,
+           lote.presenca,
+           COALESCE(NULLIF(aluno.%I::TEXT, ''''), '''') AS valor_atual
+         FROM tmp_attendance_batch lote
+         JOIN public.%I aluno
+           ON BTRIM(aluno."MAT"::TEXT) = lote.mat
+         WHERE lote.valido = TRUE
+           AND lote.dia = $1
+       ), novos_valores AS (
+         SELECT
+           item_id,
+           mat,
+           CASE
+             WHEN regexp_replace(
+               valor_atual,
+               ''(^|,)[[:space:]]*(P|FNJ|FJ):'' || mes::TEXT || ''([[:space:]]*,|$)'',
+               ''\1'' || presenca || '':'' || mes::TEXT || ''\3''
+             ) = valor_atual
+             THEN CASE
+               WHEN valor_atual = '''' THEN presenca || '':'' || mes::TEXT
+               ELSE valor_atual || '','' || presenca || '':'' || mes::TEXT
+             END
+             ELSE regexp_replace(
+               valor_atual,
+               ''(^|,)[[:space:]]*(P|FNJ|FJ):'' || mes::TEXT || ''([[:space:]]*,|$)'',
+               ''\1'' || presenca || '':'' || mes::TEXT || ''\3''
+             )
+           END AS novo_valor
+         FROM valores
+       )
+       UPDATE public.%I aluno
+       SET %I = novos.novo_valor
+       FROM novos_valores novos
+       WHERE BTRIM(aluno."MAT"::TEXT) = novos.mat',
       v_day_column,
-      table_name
-    ) INTO v_existing_value USING v_mat;
-
-    -- Se não achou a matrícula
-    IF v_existing_value IS NULL THEN
-      v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Nenhuma linha encontrada para matrícula ' || v_mat::TEXT || ' (' || COALESCE(v_nome, 'nome ausente') || ')');
-      CONTINUE;
-    END IF;
-
-    -- Substituir o status deste mês e preservar os status dos demais meses.
-    v_new_value := regexp_replace(
-      v_existing_value,
-      '(^|,)[[:space:]]*(P|FNJ|FJ):' || v_mes::TEXT || '([[:space:]]*,|$)',
-      '\1' || v_presenca || ':' || v_mes::TEXT || '\3'
-    );
-
-    IF v_new_value = v_existing_value THEN
-      v_new_value := CASE
-        WHEN v_existing_value = '' THEN v_presenca || ':' || v_mes::TEXT
-        ELSE v_existing_value || ',' || v_presenca || ':' || v_mes::TEXT
-      END;
-    END IF;
-
-    -- Executar update
-    EXECUTE format(
-      'UPDATE public.%I SET %I = $1 WHERE TRIM("MAT"::TEXT) = $2',
+      table_name,
       table_name,
       v_day_column
-    ) USING v_new_value, v_mat;
+    ) USING v_day;
 
-    GET DIAGNOSTICS v_update_result = ROW_COUNT;
-
-    IF v_update_result > 0 THEN
-      v_success := v_success + 1;
-    ELSE
-      v_failed := v_failed + 1;
-      v_errors := array_append(v_errors, 'Falha ao atualizar matrícula ' || v_mat);
-    END IF;
-
+    EXECUTE format(
+      'UPDATE tmp_attendance_batch lote
+       SET encontrado = TRUE
+       FROM public.%I aluno
+       WHERE lote.valido = TRUE
+         AND lote.dia = $1
+         AND BTRIM(aluno."MAT"::TEXT) = lote.mat',
+      table_name
+    ) USING v_day;
   END LOOP;
 
-  -- Montar resultado final
-  v_result := jsonb_build_object(
-    'success', v_success,
-    'failed', v_failed,
-    'errors', v_errors
-  );
+  UPDATE tmp_attendance_batch
+  SET
+    valido = FALSE,
+    erro = 'Nenhuma linha encontrada para matrícula ' || mat || ' (' || COALESCE(nome, 'nome ausente') || ')'
+  WHERE valido AND NOT encontrado;
+
+  SELECT jsonb_build_object(
+    'success', COUNT(*) FILTER (WHERE valido AND encontrado),
+    'failed', COUNT(*) FILTER (WHERE NOT (valido AND encontrado)),
+    'errors', COALESCE(array_agg(erro) FILTER (WHERE erro IS NOT NULL), ARRAY[]::TEXT[])
+  )
+  INTO v_result
+  FROM tmp_attendance_batch;
 
   RETURN v_result;
 END;
