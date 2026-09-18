@@ -31,7 +31,7 @@ export const routes: Routes = [
     path: 'chamada',
     loadComponent: () => import('./features/chamada/chamada.component').then(m => m.ChamadaComponent),
     canActivate: [authGuard],
-    data: { reuse: true, requiresModuleAccess: true },
+    data: { requiresModuleAccess: true },
   },
   {
     path: 'planilhas',

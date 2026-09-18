@@ -14,6 +14,7 @@ import { type StudentOperation } from '../alunos/student-operation.dialog';
 import { SessionConflictService } from '../../session-conflict.service';
 import {
   ensureTbdaCache,
+  clearTbdaCache,
   getActiveModuleLabel,
   getAttendanceCache,
   attendanceCacheCount as savedAttendanceCount,
@@ -234,7 +235,8 @@ export class ChamadaComponent implements OnInit, OnDestroy {
 
   private async reloadStudentOperationData(): Promise<void> {
     try {
-      this.tbdaRows = await ensureTbdaCache(this.useSessionStorageForTbdaCache);
+      clearTbdaCache();
+      this.tbdaRows = await syncTbdaCache(this.useSessionStorageForTbdaCache);
       this.rooms = getTbdaClassrooms(this.tbdaRows);
       this.cdr.detectChanges();
     } catch (error) {

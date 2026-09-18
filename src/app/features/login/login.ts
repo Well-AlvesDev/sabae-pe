@@ -93,17 +93,7 @@ export class LoginComponent implements OnInit {
       const hasSession = localData?.session || sessionData?.session;
 
       if (hasSession) {
-        try {
-          await refreshActiveModuleCaches(!localData?.session && !!sessionData?.session);
-          await this.router.navigateByUrl('/home');
-        } catch (securityError) {
-          console.error('Cache setup failed', securityError);
-          const client = localData?.session ? supabase : supabaseWithSessionStorage;
-          await client.auth.signOut();
-          this.authError = securityError instanceof Error
-            ? securityError.message
-            : 'Não foi possível carregar o cache deste dispositivo.';
-        }
+        await this.router.navigateByUrl('/home');
       }
     } finally {
       this.isLoading = false;

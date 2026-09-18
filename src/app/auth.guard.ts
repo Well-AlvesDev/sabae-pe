@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
-import { getActiveTable, refreshActiveModuleCaches, supabase, supabaseWithSessionStorage } from './supabase';
+import { getActiveTable, supabase, supabaseWithSessionStorage } from './supabase';
 
 export async function authGuard(route: ActivatedRouteSnapshot): Promise<boolean | UrlTree> {
   const router = inject(Router);
@@ -27,11 +27,6 @@ export async function authGuard(route: ActivatedRouteSnapshot): Promise<boolean 
       return router.parseUrl(`/login?accessDenied=true&module=${encodeURIComponent(accessTable)}`);
     }
 
-    try {
-      await refreshActiveModuleCaches(!localData?.session && !!sessionData?.session);
-    } catch (refreshError) {
-      console.error('[authGuard] failed to refresh active module cache', refreshError);
-    }
   }
 
   return true;

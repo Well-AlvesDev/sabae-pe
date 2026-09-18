@@ -115,19 +115,24 @@ async function writeIndexedDbCacheValue(key: string, value: string): Promise<voi
     return;
   }
 
-  const transaction = db.transaction(CACHE_DB_STORE, 'readwrite');
-  const store = transaction.objectStore(CACHE_DB_STORE);
-  store.put({ key, value }, key);
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(CACHE_DB_STORE, 'readwrite');
+    const store = transaction.objectStore(CACHE_DB_STORE);
+    store.put({ key, value }, key);
 
-  transaction.oncomplete = () => {
-    db.close();
-  };
-  transaction.onerror = () => {
-    db.close();
-  };
-  transaction.onabort = () => {
-    db.close();
-  };
+    transaction.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      db.close();
+      reject(transaction.error ?? new Error('Falha ao gravar o cache no IndexedDB.'));
+    };
+    transaction.onabort = () => {
+      db.close();
+      reject(new Error('A gravação do cache no IndexedDB foi interrompida.'));
+    };
+  });
 }
 
 async function removeIndexedDbCacheValue(key: string): Promise<void> {
@@ -190,7 +195,9 @@ function persistLocalStorageCacheValue(key: string, value: string): void {
     localStorageStore.setItem(key, value);
   } catch {}
 
-  void writeIndexedDbCacheValue(key, value);
+  void writeIndexedDbCacheValue(key, value).catch(() => {
+    // O cache local continua disponível quando o IndexedDB não puder gravar.
+  });
 }
 
 function getTableNameFromCacheKey(key: string): string {
@@ -407,12 +414,17 @@ function formatSaoPauloDateTime(value: number | Date = Date.now()): string {
   }).format(date);
 }
 
-function persistTbdaCache(payload: TbdaCachePayload, tableName = getActiveTable()): void {
+async function persistTbdaCache(payload: TbdaCachePayload, tableName = getActiveTable()): Promise<void> {
   if (getActiveTable() === tableName) {
     tbdaCacheMemory = payload.data;
   }
 
-  persistLocalStorageCacheValue(`sabae.tbda.cache.${tableName}`, JSON.stringify(payload));
+  const key = `sabae.tbda.cache.${tableName}`;
+  const value = JSON.stringify(payload);
+  try {
+    localStorageStore.setItem(key, value);
+  } catch {}
+  await writeIndexedDbCacheValue(key, value);
 }
 
 export function setTbdaLastSearchLabel(value: number | Date = Date.now(), tableName = getActiveTable()): string {
@@ -466,8 +478,12 @@ export async function syncTbdaCache(
     data: rows,
   };
 
-  persistTbdaCache(payload, tableName);
+  await persistTbdaCache(payload, tableName);
   setTbdaLastSearchLabel(requestedAt, tableName);
+  await writeIndexedDbCacheValue(
+    `sabae.tbda.last-search.${tableName}`,
+    getTbdaLastSearchLabel(),
+  );
   return rows;
 }
 
@@ -897,6 +913,8 @@ export async function sendAttendanceCacheToTbda(
     });
   }
 
+  await persistActiveModuleCachesToIndexedDb();
+
   return {
     success,
     failed,
@@ -1207,7 +1225,7 @@ export async function unlockTbdaCache(): Promise<void> {
     }
 
     tbdaCacheMemory = payload.data;
-    persistTbdaCache(payload);
+    await persistTbdaCache(payload);
   } catch {
     tbdaCacheMemory = null;
     try {
@@ -1425,7 +1443,7 @@ export async function updateStudentClassroom(
   if (!cachedStudentFound) {
     updatedRows.push({ ...refreshedStudent, TURMA: normalizedClassroom });
   }
-  saveTbdaCache(updatedRows);
+  await saveTbdaCache(updatedRows);
 
   const oldClassroom = String(studentRow?.['TURMA'] ?? studentRow?.['turma'] ?? '').trim();
   const studentMatches = (student: AttendanceCacheStudent): boolean =>
@@ -1566,7 +1584,7 @@ export async function updateStudentShift(
     const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
     matchingRows.forEach(row => { row['TURNO'] = normalizedShift; });
     if (matchingRows.length) {
-      saveTbdaCache(tbdaRows);
+      await saveTbdaCache(tbdaRows);
     }
   }
 
@@ -1611,7 +1629,7 @@ export async function updateStudentName(
     const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedCurrentName));
     matchingRows.forEach(row => { row['NOME'] = normalizedNewName; });
     if (matchingRows.length) {
-      saveTbdaCache(tbdaRows);
+      await saveTbdaCache(tbdaRows);
     }
   }
 
@@ -1642,13 +1660,13 @@ function normalizeStudentName(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
 }
 
-function saveTbdaCache(rows: Record<string, unknown>[]): void {
+async function saveTbdaCache(rows: Record<string, unknown>[]): Promise<void> {
   const payload: TbdaCachePayload = {
     version: TBDA_CACHE_VERSION,
     timestamp: Date.now(),
     data: rows,
   };
-  persistTbdaCache(payload);
+  await persistTbdaCache(payload);
 }
 
 export const supabaseWithSessionStorage = createClient(
