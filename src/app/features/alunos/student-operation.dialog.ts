@@ -26,6 +26,7 @@ import {
   updateStudentShift,
   updateStudentStatus,
   type StudentAdministrativeStatus,
+  type StudentBenefitsSelection,
   type StudentFunctionRule,
 } from '../../supabase';
 import type { AttendanceDay } from './aluno-attendance.dialog';
@@ -62,6 +63,8 @@ type StudentSearchItem = {
   room: string;
   shift: string;
   status: StudentAdministrativeStatus;
+  peDeMeia: StudentBenefitsSelection;
+  bolsaFamilia: StudentBenefitsSelection;
 };
 
 export type StudentOperationDialogData = {
@@ -374,6 +377,16 @@ export type StudentOperationDialogData = {
           }
         </div>
       } @else {
+      @if (data.operation === 'Atribuir Pé de meia/Bolsa Família') {
+        <mat-form-field class="benefit-filter-field" appearance="outline">
+          <mat-label>Filtrar alunos</mat-label>
+          <mat-select [value]="benefitFilter()" (selectionChange)="setBenefitFilter($event.value)"
+            aria-label="Filtrar alunos por preenchimento dos benefícios">
+            <mat-option value="all">Todos os alunos</mat-option>
+            <mat-option value="missing">Apenas não informados</mat-option>
+          </mat-select>
+        </mat-form-field>
+      }
       <mat-form-field class="search-field" appearance="outline">
         <mat-label>Pesquisar aluno</mat-label>
         <mat-icon matPrefix>search</mat-icon>
@@ -500,6 +513,7 @@ export type StudentOperationDialogData = {
 })
 export class StudentOperationDialogComponent {
   public readonly searchTerm = signal('');
+  public readonly benefitFilter = signal<'all' | 'missing'>('all');
   public readonly isLoading = signal(true);
   public readonly hasError = signal(false);
   public readonly students = signal<StudentSearchItem[]>([]);
@@ -546,12 +560,15 @@ export class StudentOperationDialogComponent {
   public readonly pageSize = 25;
   public readonly filteredStudents = computed(() => {
     const term = this.normalize(this.searchTerm());
-    if (!term) {
-      return this.students();
-    }
-    return this.students().filter(student =>
-      this.normalize(student.name).includes(term) || this.normalize(student.registration).includes(term),
-    );
+    const filter = this.benefitFilter();
+
+    return this.students().filter(student => {
+      const matchesTerm = !term
+        || this.normalize(student.name).includes(term)
+        || this.normalize(student.registration).includes(term);
+      const hasMissingBenefit = student.peDeMeia === 'nao-informado' || student.bolsaFamilia === 'nao-informado';
+      return matchesTerm && (filter === 'all' || hasMissingBenefit);
+    });
   });
   public readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredStudents().length / this.pageSize)));
   public readonly paginatedStudents = computed(() => {
@@ -561,6 +578,11 @@ export class StudentOperationDialogComponent {
 
   public setSearchTerm(value: string): void {
     this.searchTerm.set(value);
+    this.currentPage.set(1);
+  }
+
+  public setBenefitFilter(value: 'all' | 'missing'): void {
+    this.benefitFilter.set(value);
     this.currentPage.set(1);
   }
 
@@ -596,6 +618,8 @@ export class StudentOperationDialogComponent {
               room: this.newStudent.classroom.trim(),
               shift: this.newStudent.shift.trim(),
               status: 'Matriculado',
+              peDeMeia: 'nao-informado',
+              bolsaFamilia: 'nao-informado',
             },
             message: 'Aluno cadastrado com sucesso.',
           },
@@ -808,6 +832,7 @@ export class StudentOperationDialogComponent {
           room: this.getValue(row, 'TURMA'),
           shift: this.getValue(row, 'TURNO'),
           status: this.getStudentStatus(row),
+          ...parseStudentBenefitsCellValue(this.getValue(row, 'PM-BF', 'PM_BF')),
         }))
         .filter((student): student is StudentSearchItem => Boolean(student.name)));
     } catch {
