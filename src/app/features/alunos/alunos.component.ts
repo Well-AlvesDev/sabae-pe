@@ -8,7 +8,8 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { take } from 'rxjs';
+import { Subscription, take } from 'rxjs';
+import { LayoutRefreshService } from '../../core/layout/layout-refresh.service';
 import { attendanceCacheCount as savedAttendanceCount, ensureTbdaCache, getActiveModuleLabel, getActiveStudentFunctionRules, hydrateStudentFunctionRulesFromIndexedDb, supabase, supabaseWithSessionStorage } from '../../supabase';
 import { AlunoAttendanceDialogComponent, type AttendanceDay } from './aluno-attendance.dialog';
 import { type StudentOperation } from './student-operation.dialog';
@@ -71,14 +72,20 @@ export class AlunosComponent implements OnInit, OnDestroy {
   private authSub1: { unsubscribe?: () => void } | undefined;
   private authSub2: { unsubscribe?: () => void } | undefined;
   private logoutDialogOpen = false;
+  private layoutRefreshSubscription?: Subscription;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
   private readonly studentOperationDialogComponentPromise = import('./student-operation.dialog')
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
-  constructor(private readonly router: Router, private readonly dialog: MatDialog) {}
+  constructor(private readonly router: Router, private readonly dialog: MatDialog, private readonly layoutRefresh: LayoutRefreshService) {}
 
   public async ngOnInit(): Promise<void> {
+    this.layoutRefreshSubscription = this.layoutRefresh.refresh$.subscribe(() => {
+      if (this.router.url.startsWith('/alunos')) {
+        void this.reloadStudentsFromCache();
+      }
+    });
     await hydrateStudentFunctionRulesFromIndexedDb();
     await this.loadProfile();
     try {
@@ -226,6 +233,7 @@ export class AlunosComponent implements OnInit, OnDestroy {
   }
 
   public ngOnDestroy(): void {
+    this.layoutRefreshSubscription?.unsubscribe();
     this.authSub1?.unsubscribe?.();
     this.authSub2?.unsubscribe?.();
   }

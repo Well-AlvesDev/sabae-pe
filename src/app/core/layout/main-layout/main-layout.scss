@@ -4,14 +4,6 @@
 }
 
 .page-content {
-  padding: 24px;
-}
-
-/* main layout now contains only the router outlet; header/nav moved to feature pages */
-
-@media (min-width: 768px) {
-  .page-content {
-    padding-bottom: 24px;
-  }
+  padding: 0;
 }
 

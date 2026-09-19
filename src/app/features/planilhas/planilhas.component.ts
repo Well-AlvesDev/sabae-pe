@@ -7,9 +7,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink } from '@angular/router';
-import { take } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import type { User } from '@supabase/supabase-js';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
+import { LayoutRefreshService } from '../../core/layout/layout-refresh.service';
 import { SessionConflictService } from '../../session-conflict.service';
 import {
   ensureTbdaCache,
@@ -59,15 +60,21 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   private tbdaRows: Record<string, unknown>[] = [];
   private authSub1: any;
   private authSub2: any;
+  private layoutRefreshSubscription?: Subscription;
   private _logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
   private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private layoutRefresh?: LayoutRefreshService, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    this.layoutRefreshSubscription = this.layoutRefresh?.refresh$.subscribe(() => {
+      if (this.router.url.startsWith('/planilhas')) {
+        void this.reloadTbdaRows();
+      }
+    });
     await hydrateStudentFunctionRulesFromIndexedDb();
     try {
       const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
@@ -330,6 +337,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.layoutRefreshSubscription?.unsubscribe();
     try { this.authSub1?.unsubscribe?.(); } catch {}
     try { this.authSub2?.unsubscribe?.(); } catch {}
   }

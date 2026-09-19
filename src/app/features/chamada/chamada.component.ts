@@ -8,9 +8,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import type { User } from '@supabase/supabase-js';
 import { Router, RouterLink } from '@angular/router';
-import { take } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import { AttendanceDeleteConfirmDialogComponent, AttendanceDuplicateWarningDialogComponent, AttendanceProgressDialogComponent, AttendanceSendConfirmDialogComponent } from './attendance-send-confirmation.dialog';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
+import { LayoutRefreshService } from '../../core/layout/layout-refresh.service';
 import { SessionConflictService } from '../../session-conflict.service';
 import {
   ensureTbdaCache,
@@ -91,6 +92,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   public isSendingSavedAttendances = false;
   private authSub1: any;
   private authSub2: any;
+  private layoutRefreshSubscription?: Subscription;
   private _logoutDialogOpen = false;
   private readonly logoutDialogComponentPromise = import('../home/logout-confirm.dialog')
     .then(({ LogoutConfirmDialogComponent }) => LogoutConfirmDialogComponent);
@@ -98,9 +100,14 @@ export class ChamadaComponent implements OnInit, OnDestroy {
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
   private useSessionStorageForTbdaCache = false;
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private dialog: MatDialog, @Optional() private layoutRefresh?: LayoutRefreshService, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    this.layoutRefreshSubscription = this.layoutRefresh?.refresh$.subscribe(() => {
+      if (this.router.url.startsWith('/chamada')) {
+        void this.reloadStudentOperationData();
+      }
+    });
     try {
       await hydrateStudentFunctionRulesFromIndexedDb();
       await prepareActiveModuleCaches();
@@ -584,6 +591,7 @@ export class ChamadaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.layoutRefreshSubscription?.unsubscribe();
     try { this.authSub1?.unsubscribe?.(); } catch {}
     try { this.authSub2?.unsubscribe?.(); } catch {}
   }

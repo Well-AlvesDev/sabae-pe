@@ -1,3 +1,104 @@
+<header class="top-app-bar" role="banner" aria-label="Barra superior">
+    <div class="leading">
+        <button class="icon-button menu-button" type="button" aria-label="Abrir menu" (click)="toggleMenu()">
+            <span class="material-icons">menu</span>
+        </button>
+        <a class="brand" routerLink="/home" aria-label="Voltar para o início">
+            <img src="/sabae-max1.webp" alt="SABAE logo" class="app-bar-logo">
+        </a>
+    </div>
+    <div class="actions">
+        <div class="profile-avatar" [class.loading]="isLoadingProfile()"
+            [attr.aria-label]="isLoadingProfile() ? 'Carregando perfil do usuário' : 'Perfil de ' + userName()">
+            @if (isLoadingProfile()) {
+            <mat-progress-spinner diameter="28" strokeWidth="3" mode="indeterminate"
+                aria-hidden="true"></mat-progress-spinner>
+            } @else {
+            <span>{{ avatarInitial() }}</span>
+            }
+        </div>
+    </div>
+</header>
+
+@if (isMenuOpen()) {
+<div class="drawer-backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+}
+<nav class="side-drawer" [class.open]="isMenuOpen()" aria-label="Menu lateral">
+    <div class="drawer-header" style="background-image: url('/lines.png')">
+        <div class="drawer-overlay"></div>
+        <div class="drawer-profile">
+            <div class="drawer-avatar" [class.loading]="isLoadingProfile()"
+                [attr.aria-label]="isLoadingProfile() ? 'Carregando perfil do usuário' : 'Perfil de ' + userName()">
+                @if (isLoadingProfile()) {
+                <mat-progress-spinner diameter="48" strokeWidth="3" mode="indeterminate"
+                    aria-hidden="true"></mat-progress-spinner>
+                } @else {
+                <span>{{ avatarInitial() }}</span>
+                }
+            </div>
+            <div class="drawer-text">
+                <div class="drawer-title">{{ schoolName }}</div>
+                <div class="drawer-subtitle">{{ userEmail() }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="drawer-items">
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
+            <summary class="drawer-item"><span class="material-icons">play_arrow</span><span>Operar</span><span
+                    class="material-icons drawer-submenu-arrow">expand_more</span></summary>
+            <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Adicionar Aluno')">Adicionar Aluno</button>
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Atribuir Pé de meia/Bolsa Família')">Atribuir Pé de meia/Bolsa
+                    Família</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Status do Aluno')">Alterar Status do Aluno
+                    (Transferido/Matriculado)</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Turma do Aluno')">Alterar Turma do Aluno</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar Nome do Aluno')">Alterar Nome do Aluno</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Alterar turno')">Alterar turno</button>
+            </div>
+        </details>
+        <details class="drawer-submenu" (toggle)="onSidebarSubmenuToggle($event)">
+            <summary class="drawer-item"><span class="material-icons">calculate</span><span>Funções</span><span
+                    class="material-icons drawer-submenu-arrow">expand_more</span></summary>
+            <div class="drawer-submenu-items">
+                <button class="drawer-submenu-item add-student-operation" type="button"
+                    (click)="openStudentOperation('Criar função')">Criar função</button>
+                <button class="drawer-submenu-item alter-operation" type="button"
+                    (click)="openStudentOperation('Visualizar funções')"><span>Visualizar Funções Ativas</span><span
+                        class="function-badge">{{ getActiveFunctionCount() }}</span></button>
+                <button class="drawer-submenu-item delete-operation" type="button"
+                    (click)="openStudentOperation('Excluir função')">Excluir função</button>
+            </div>
+        </details>
+        <button class="drawer-item" type="button" (click)="openStudentOperation('Visualizar aluno')"><span
+                class="material-icons">visibility</span>Visualizar Aluno<span
+                class="material-icons drawer-item-arrow">chevron_right</span></button>
+        <button class="drawer-item logout-button" type="button" (click)="logout()"><span
+                class="material-icons">exit_to_app</span>Sair</button>
+    </div>
+</nav>
+
 <main class="page-content">
     <router-outlet></router-outlet>
 </main>
+
+<nav class="bottom-nav" role="navigation" aria-label="Barra de navegação">
+    <a routerLink="/home" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item"
+        aria-label="Início"><span class="material-icons">home</span><span class="label">Início</span></a>
+    <a routerLink="/chamada" routerLinkActive="active" class="nav-item" aria-label="Chamada"><span
+            class="nav-icon-wrap"><span class="material-icons">assignment</span>@if (savedAttendanceCount() > 0) {<span
+                class="nav-badge" aria-hidden="true">{{ savedAttendanceCount() }}</span>}</span><span
+            class="label">Chamada</span></a>
+    <a routerLink="/planilhas" routerLinkActive="active" class="nav-item" aria-label="Planilhas"><span
+            class="material-icons">bar_chart</span><span class="label">Planilhas</span></a>
+    <a routerLink="/alunos" routerLinkActive="active" class="nav-item" aria-label="Alunos"><span
+            class="material-icons">people</span><span class="label">Alunos</span></a>
+    <a routerLink="/sobre" routerLinkActive="active" class="nav-item" aria-label="Sobre"><span
+            class="material-icons">info</span><span class="label">Sobre</span></a>
+</nav>

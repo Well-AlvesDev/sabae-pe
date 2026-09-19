@@ -6,8 +6,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { take } from 'rxjs';
+import { Subscription, take } from 'rxjs';
 import { type StudentOperation } from '../alunos/student-operation.dialog';
+import { LayoutRefreshService } from '../../core/layout/layout-refresh.service';
 import { SessionConflictService } from '../../session-conflict.service';
 import {
   clearTbdaCache,
@@ -92,6 +93,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly tbdaColumns = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
   private authSub1: any;
   private authSub2: any;
+  private layoutRefreshSubscription?: Subscription;
   private loadingStart = Date.now();
   private attendanceRows: Record<string, unknown>[] = [];
   private _logoutDialogOpen = false;
@@ -100,9 +102,14 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly studentOperationDialogComponentPromise = import('../alunos/student-operation.dialog')
     .then(({ StudentOperationDialogComponent }) => StudentOperationDialogComponent);
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog, @Optional() private sessionConflict?: SessionConflictService) {}
+  constructor(private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone, private dialog: MatDialog, @Optional() private layoutRefresh?: LayoutRefreshService, @Optional() private sessionConflict?: SessionConflictService) {}
 
   async ngOnInit(): Promise<void> {
+    this.layoutRefreshSubscription = this.layoutRefresh?.refresh$.subscribe(() => {
+      if (this.router.url.startsWith('/home')) {
+        void this.refreshAttendanceData();
+      }
+    });
     await hydrateStudentFunctionRulesFromIndexedDb();
     this.isLoadingProfile = true;
     this.isLoadingAttendanceScore = true;
@@ -816,6 +823,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.layoutRefreshSubscription?.unsubscribe();
     try { this.authSub1?.unsubscribe?.(); } catch {}
     try { this.authSub2?.unsubscribe?.(); } catch {}
   }
