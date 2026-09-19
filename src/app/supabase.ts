@@ -380,7 +380,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 const TBDA_COLUMNS = Array.from({ length: 31 }, (_, i) => `${i + 1}`);
 const TBDA_CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 const TBDA_CACHE_VERSION = 4;
-const TBDA_METADATA_COLUMNS = ['MAT', 'NOME', 'TURMA', 'TURNO', 'STATUS'];
+const TBDA_METADATA_COLUMNS = ['MAT', 'NOME', 'TURMA', 'TURNO', 'STATUS', 'PM-BF'];
 function getAttendanceCacheKey(): string {
   return `sabae.attendance.cache.${getActiveTable()}`;
 }
@@ -1266,6 +1266,56 @@ export function clearPersistentCache(): void {
 
 export type StudentAdministrativeStatus = 'Transferido' | 'Matriculado';
 
+export type StudentBenefitsSelection = 'sim' | 'nao' | 'nao-informado';
+
+export function formatStudentBenefitsCellValue(
+  peDeMeia: StudentBenefitsSelection | 'Sim' | 'Não' | 'sim' | 'nao' | 'não' | 'nao' | string,
+  bolsaFamilia: StudentBenefitsSelection | 'Sim' | 'Não' | 'sim' | 'nao' | 'não' | 'nao' | string,
+): string {
+  const normalize = (value: string): StudentBenefitsSelection => {
+    const normalized = String(value ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+    if (normalized === 'sim') {
+      return 'sim';
+    }
+    return normalized === 'nao informado' ? 'nao-informado' : 'nao';
+  };
+
+  const format = (value: StudentBenefitsSelection): string => {
+    if (value === 'sim') {
+      return 'sim';
+    }
+    return value === 'nao-informado' ? 'não informado' : 'não';
+  };
+
+  return `${format(normalize(peDeMeia))}, ${format(normalize(bolsaFamilia))}`;
+}
+
+export function parseStudentBenefitsCellValue(value: string | null | undefined): { peDeMeia: StudentBenefitsSelection; bolsaFamilia: StudentBenefitsSelection } {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return { peDeMeia: 'nao-informado', bolsaFamilia: 'nao-informado' };
+  }
+
+  const values = normalized
+    .split(',')
+    .map(token => token.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR'))
+    .filter(Boolean);
+
+  const parseValue = (item: string | undefined): StudentBenefitsSelection => {
+    if (item === 'sim') {
+      return 'sim';
+    }
+    if (item === 'nao informado') {
+      return 'nao-informado';
+    }
+    return 'nao';
+  };
+  const peDeMeia = parseValue(values[0]);
+  const bolsaFamilia = parseValue(values[1]);
+
+  return { peDeMeia, bolsaFamilia };
+}
+
 export type NewStudentInput = {
   name: string;
   registration: string;
@@ -1598,6 +1648,55 @@ export async function updateStudentShift(
     ),
   }));
   persistAttendanceCache(updatedEntries);
+  await persistActiveModuleCachesToIndexedDb();
+}
+
+export async function updateStudentBenefits(
+  registration: string,
+  name: string,
+  peDeMeia: StudentBenefitsSelection | 'Sim' | 'Não',
+  bolsaFamilia: StudentBenefitsSelection | 'Sim' | 'Não',
+): Promise<void> {
+  await hydrateActiveModuleCaches();
+
+  const normalizedRegistration = String(registration ?? '').trim();
+  const normalizedName = String(name ?? '').trim();
+  const formattedValue = formatStudentBenefitsCellValue(peDeMeia, bolsaFamilia);
+
+  if (!normalizedRegistration && !normalizedName) {
+    throw new Error('Aluno sem matrícula ou nome para atualização de benefícios.');
+  }
+
+  const [{ data: localSessionData }, { data: sessionSessionData }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabaseWithSessionStorage.auth.getSession(),
+  ]);
+  const useSessionStorage = !!sessionSessionData?.session && !localSessionData?.session;
+  const client = useSessionStorage ? supabaseWithSessionStorage : supabase;
+
+  let query = client.from(getActiveTable()).update({ 'PM-BF': formattedValue });
+  const result = normalizedRegistration
+    ? await query.eq('MAT', normalizedRegistration)
+    : await query.eq('NOME', normalizedName);
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const refreshedRows = await syncTbdaCache(useSessionStorage);
+  const updatedStudent = refreshedRows.find(row => matchesStudent(row, normalizedRegistration, normalizedName));
+  const refreshedValue = String(updatedStudent?.['PM-BF'] ?? updatedStudent?.['PM_BF'] ?? '').trim();
+  if (!updatedStudent || refreshedValue !== formattedValue) {
+    const tbdaRows = getTbdaCache() ?? [];
+    const matchingRows = tbdaRows.filter(row => matchesStudent(row, normalizedRegistration, normalizedName));
+    matchingRows.forEach(row => {
+      row['PM-BF'] = formattedValue;
+    });
+    if (matchingRows.length) {
+      await saveTbdaCache(tbdaRows);
+    }
+  }
+
   await persistActiveModuleCachesToIndexedDb();
 }
 

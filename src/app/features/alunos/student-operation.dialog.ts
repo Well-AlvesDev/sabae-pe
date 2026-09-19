@@ -12,12 +12,15 @@ import { MatSelectModule } from '@angular/material/select';
 import {
   ensureTbdaCache,
   getStudentFunctionRules,
-  hydrateStudentFunctionRulesFromIndexedDb,
   getTbdaClassrooms,
   getTbdaShifts,
+  getTbdaCache,
+  hydrateStudentFunctionRulesFromIndexedDb,
   insertStudent,
+  parseStudentBenefitsCellValue,
   removeStudentFunctionRule,
   saveStudentFunctionRule,
+  updateStudentBenefits,
   updateStudentClassroom,
   updateStudentName,
   updateStudentShift,
@@ -29,6 +32,7 @@ import type { AttendanceDay } from './aluno-attendance.dialog';
 
 export type StudentOperation =
   | 'Adicionar Aluno'
+  | 'Atribuir Pé de meia/Bolsa Família'
   | 'Alterar Status do Aluno'
   | 'Alterar Turma do Aluno'
   | 'Alterar Nome do Aluno'
@@ -79,7 +83,7 @@ export type StudentOperationDialogData = {
     MatSelectModule,
   ],
   template: `
-    <section class="operation-dialog" aria-labelledby="operation-dialog-title">
+    <section class="operation-dialog" [class.function-creation-dialog]="data.operation === 'Criar função'" aria-labelledby="operation-dialog-title">
       <header class="dialog-header">
         <div>
           <p class="dialog-eyebrow"
@@ -430,6 +434,12 @@ export type StudentOperationDialogData = {
   styles: [`
     :host { display: block; }
     .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
+    .function-creation-dialog { width: min(480px, calc(100vw - 32px)); height: auto; max-height: calc(100vh - 32px); padding: 16px; }
+    .function-creation-dialog .dialog-header { margin-bottom: 12px; }
+    .function-creation-dialog .function-creation-form { gap: 6px; }
+    .function-creation-dialog .mat-mdc-form-field { --mat-form-field-container-height: 44px; }
+    .function-creation-dialog .function-results { max-height: 120px; }
+    .function-creation-dialog .function-actions { margin-top: 2px; }
     .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     .dialog-eyebrow { margin: 0 0 4px; color: #34b447; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
     .dialog-eyebrow.operation-alter { color: #e8b80a; }
@@ -481,7 +491,10 @@ export type StudentOperationDialogData = {
     .student-result:last-child { border-bottom: 0; }
     .student-result:hover, .student-result:focus-visible { background: #f5f9fd; }
     .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding-top: 10px; color: #526579; font-size: 0.85rem; }
-    @media (max-width: 480px) { .operation-dialog { padding: 18px 14px; } }
+    @media (max-width: 480px) {
+      .operation-dialog { padding: 18px 14px; }
+      .function-creation-dialog { padding: 14px 12px; }
+    }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -682,42 +695,47 @@ export class StudentOperationDialogComponent {
     }
 
     if (this.data.operation === 'Alterar Status do Aluno') {
-      const dialogRef = this.dialog.open(StudentTransferStatusDialogComponent, {
+      this.dialog.open(StudentTransferStatusDialogComponent, {
         data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar Turma do Aluno') {
-      const dialogRef = this.dialog.open(StudentClassroomDialogComponent, {
+      this.dialog.open(StudentClassroomDialogComponent, {
         data: { student, classrooms: this.classrooms() },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar Nome do Aluno') {
-      const dialogRef = this.dialog.open(StudentNameDialogComponent, {
+      this.dialog.open(StudentNameDialogComponent, {
         data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
       return;
     }
 
     if (this.data.operation === 'Alterar turno') {
-      const dialogRef = this.dialog.open(StudentShiftDialogComponent, {
+      this.dialog.open(StudentShiftDialogComponent, {
         data: { student, shifts: this.shifts() },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
       });
-      dialogRef.afterClosed().subscribe(result => this.dialogRef.close(result === true));
+      return;
+    }
+
+    if (this.data.operation === 'Atribuir Pé de meia/Bolsa Família') {
+      this.dialog.open(StudentBenefitsDialogComponent, {
+        data: { student },
+        autoFocus: false,
+        maxWidth: 'calc(100vw - 32px)',
+      });
       return;
     }
 
@@ -1403,6 +1421,151 @@ export class StudentShiftDialogComponent {
       this.dialogRef.close(true);
     } catch {
       this.errorMessage.set('Não foi possível atualizar o turno.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+}
+
+type StudentBenefitsDialogData = {
+  student: StudentSearchItem;
+};
+
+@Component({
+  selector: 'app-student-benefits-dialog',
+  imports: [CommonModule, FormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatProgressSpinnerModule, MatSelectModule],
+  template: `
+    <section class="benefits-dialog" aria-labelledby="benefits-dialog-title">
+      <header class="status-dialog-header">
+        <div>
+          <p class="dialog-eyebrow">Atribuir benefício para:</p>
+          <h2 id="benefits-dialog-title">{{ data.student.name }}</h2>
+          <p class="student-meta">Matrícula: {{ data.student.registration || 'não informada' }}</p>
+          @if (data.student.room) {
+            <p class="student-meta">Turma: {{ data.student.room }}</p>
+          }
+        </div>
+        <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <mat-form-field class="status-field" appearance="outline">
+        <mat-label>RECEBE PÉ DE MEIA?</mat-label>
+        <mat-select [(ngModel)]="recebePeMeia">
+          <mat-option value="sim">Sim</mat-option>
+          <mat-option value="nao">Não</mat-option>
+          <mat-option value="nao-informado">Não informado</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="status-field" appearance="outline">
+        <mat-label>RECEBE BOLSA FAMÍLIA?</mat-label>
+        <mat-select [(ngModel)]="recebeBolsaFamilia">
+          <mat-option value="sim">Sim</mat-option>
+          <mat-option value="nao">Não</mat-option>
+          <mat-option value="nao-informado">Não informado</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      @if (errorMessage()) {
+        <p class="error-message" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
+      }
+
+      <footer class="status-actions">
+        <button mat-button type="button" mat-dialog-close>Cancelar</button>
+        <button class="execute-button" mat-flat-button type="button" (click)="execute()" [disabled]="isSaving()">
+          @if (isSaving()) { <mat-spinner diameter="18"></mat-spinner> }
+          @else { <mat-icon>play_arrow</mat-icon> }
+          Salvar
+        </button>
+      </footer>
+    </section>
+  `,
+  styles: [`
+    :host { display: block; }
+    .benefits-dialog { width: min(430px, calc(100vw - 32px)); padding: 20px; color: #263746; }
+    .status-dialog-header, .status-actions, .error-message { display: flex; align-items: center; }
+    .status-dialog-header { align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .dialog-eyebrow { margin: 0 0 4px; color: #34b447; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    h2 { margin: 0; color: #0c365c; font-size: 1.15rem; line-height: 1.25; }
+    .student-meta { margin: 5px 0 0; color: #718096; font-size: 0.82rem; }
+    .status-field { display: block; width: 100%; margin-bottom: 12px; }
+    .error-message { gap: 7px; margin: 0 0 12px; color: #b42318; font-size: 0.82rem; }
+    .error-message mat-icon { font-size: 19px; }
+    .status-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
+    .status-actions button { display: inline-flex; align-items: center; gap: 6px; }
+    .execute-button { background: #34b447 !important; color: #fff !important; }
+    .execute-button:hover:not(:disabled) { background: #278d36 !important; }
+    .execute-button:disabled { background: #8bc991 !important; color: #f4fff5 !important; }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class StudentBenefitsDialogComponent {
+  public recebePeMeia: 'sim' | 'nao' | 'nao-informado' = 'nao-informado';
+  public recebeBolsaFamilia: 'sim' | 'nao' | 'nao-informado' = 'nao-informado';
+  public readonly isSaving = signal(false);
+  public readonly errorMessage = signal('');
+
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public readonly data: StudentBenefitsDialogData,
+    private readonly dialogRef: MatDialogRef<StudentBenefitsDialogComponent>,
+    private readonly dialog: MatDialog,
+  ) {
+    this.applySavedBenefits();
+    void ensureTbdaCache().then(() => this.applySavedBenefits());
+  }
+
+  private applySavedBenefits(): void {
+    const rows = getTbdaCache() ?? [];
+    const row = rows.find(studentRow => {
+      const rowRegistration = String(studentRow['MAT'] ?? studentRow['MATRICULA'] ?? studentRow['MATRÍCULA'] ?? studentRow['registration'] ?? '').trim();
+      const rowName = String(studentRow['NOME'] ?? studentRow['name'] ?? '').trim();
+      if (this.data.student.registration && rowRegistration && rowRegistration === this.data.student.registration) {
+        return true;
+      }
+      return Boolean(this.data.student.name) && this.normalizeStudentName(rowName) === this.normalizeStudentName(this.data.student.name);
+    });
+
+    const savedValue = parseStudentBenefitsCellValue(String(row?.['PM-BF'] ?? row?.['PM_BF'] ?? ''));
+    this.recebePeMeia = savedValue.peDeMeia;
+    this.recebeBolsaFamilia = savedValue.bolsaFamilia;
+  }
+
+  private normalizeStudentName(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
+  }
+
+  private getBenefitLabel(value: 'sim' | 'nao' | 'nao-informado'): string {
+    if (value === 'sim') {
+      return 'Sim';
+    }
+    return value === 'nao-informado' ? 'Não informado' : 'Não';
+  }
+
+  public async execute(): Promise<void> {
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+    try {
+      await updateStudentBenefits(
+        this.data.student.registration,
+        this.data.student.name,
+        this.recebePeMeia,
+        this.recebeBolsaFamilia,
+      );
+      this.dialogRef.afterClosed().subscribe(() => {
+        this.dialog.open(StudentOperationSuccessDialogComponent, {
+          data: {
+            student: this.data.student,
+            message: `Benefícios atualizados para ${this.data.student.name}: Pé de meia ${this.getBenefitLabel(this.recebePeMeia)}; Bolsa Família ${this.getBenefitLabel(this.recebeBolsaFamilia)}.`,
+          },
+          autoFocus: false,
+          maxWidth: 'calc(100vw - 32px)',
+        });
+      });
+      this.dialogRef.close(true);
+    } catch {
+      this.errorMessage.set('Não foi possível salvar a atribuição dos benefícios.');
     } finally {
       this.isSaving.set(false);
     }

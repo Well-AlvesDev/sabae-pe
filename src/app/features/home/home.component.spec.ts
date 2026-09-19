@@ -66,6 +66,28 @@ describe('HomeComponent performance status', () => {
     ]);
   });
 
+  it('should summarize student benefits and missing information', () => {
+    const result = component['buildBenefitSummary']([
+      { 'PM-BF': 'sim, sim' },
+      { 'PM-BF': 'não, sim' },
+      { 'PM-BF': 'sim, não' },
+      { 'PM-BF': 'não informado, não informado' },
+      { 'PM-BF': 'sim, não informado' },
+    ]);
+
+    expect(result).toEqual({
+      totalStudents: 5,
+      bothBenefits: 1,
+      onlyBolsaFamilia: 1,
+      onlyPeDeMeia: 1,
+      missingBoth: 1,
+      missingBolsaFamilia: 2,
+      missingPeDeMeia: 1,
+    });
+    component['benefitSummary'] = result;
+    expect(component.getBenefitPercentage(2)).toBe(40);
+  });
+
   it('should classify monthly chart trends', () => {
     component.monthlyAttendanceSummary = [
       { month: 1, label: 'Jan', presentPct: 70, total: 10 },

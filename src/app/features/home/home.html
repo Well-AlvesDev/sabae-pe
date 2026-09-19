@@ -46,6 +46,10 @@
           (click)="openStudentOperation('Adicionar Aluno')">
           Adicionar Aluno
         </button>
+        <button class="drawer-submenu-item add-student-operation" type="button"
+          (click)="openStudentOperation('Atribuir Pé de meia/Bolsa Família')">
+          Atribuir Pé de meia/Bolsa Família
+        </button>
         <button class="drawer-submenu-item alter-operation" type="button"
           (click)="openStudentOperation('Alterar Status do Aluno')">Alterar Status do Aluno
           (Transferido/Matriculado)</button>
@@ -107,57 +111,257 @@
       </div>
     </div>
 
-    <section class="overview-card" aria-label="Visão Geral da Escola">
-      <div class="overview-body">
-        <div class="overview-left">
-          <div class="card-title">
-            <span class="material-icons">military_tech</span>
-            <strong>Avaliação de frequência</strong>
+    <section class="overview-card attendance-and-monthly-card" aria-label="Avaliação e presença mensal">
+      <section class="attendance-panel" aria-label="Visão Geral da Escola">
+        <div class="overview-body">
+          <div class="overview-left">
+            <div class="card-title">
+              <span class="material-icons">military_tech</span>
+              <strong>Avaliação de frequência</strong>
+            </div>
+            <p class="attendance-score-legend">
+              Média = presenças ÷ (presenças + faltas não justificadas) × 10. Faltas justificadas não entram no cálculo.
+            </p>
+            <ng-container *ngIf="isLoadingAttendanceScore; else attendanceContent">
+              <div class="card-loader" aria-label="Carregando avaliação de frequência">
+                <div class="md-skeleton" aria-hidden="true">
+                  <div class="skeleton-line title"></div>
+                  <div class="skeleton-line short"></div>
+                  <div class="skeleton-line badge"></div>
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #attendanceContent>
+              <div class="score-row">
+                <div class="score-label">Média Geral:</div>
+                <div class="score-value">{{ formatScore(averageScore) }}/10</div>
+              </div>
+              <div class="performance-badge" [class.good]="performanceClass === 'good'"
+                [class.warning]="performanceClass === 'warning'" [class.danger]="performanceClass === 'danger'"
+                [attr.aria-label]="performanceLabel">
+                <span class="material-icons">check_circle</span>
+                <span class="badge-text">{{ performanceLabel }}</span>
+              </div>
+            </ng-template>
           </div>
-          <p class="attendance-score-legend">
-            Média = presenças ÷ (presenças + faltas não justificadas) × 10. Faltas justificadas não entram no cálculo.
-          </p>
-          <ng-container *ngIf="isLoadingAttendanceScore; else attendanceContent">
-            <div class="card-loader" aria-label="Carregando avaliação de frequência">
-              <div class="md-skeleton" aria-hidden="true">
-                <div class="skeleton-line title"></div>
-                <div class="skeleton-line short"></div>
-                <div class="skeleton-line badge"></div>
+
+          <div class="overview-right" [attr.aria-hidden]="isLoadingAttendanceScore ? 'true' : 'false'">
+            <ng-container *ngIf="!isLoadingAttendanceScore; else ringLoading">
+              <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
+                <circle class="ring-bg" cx="21" cy="21" r="15.5" />
+                <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)"
+                  [attr.stroke]="performanceClass === 'good' ? '#1f9d5f' : performanceClass === 'warning' ? '#f59e0b' : performanceClass === 'danger' ? '#dc2626' : '#1e3a8a'" />
+                <text x="21" y="22" class="ring-text" text-anchor="middle">{{ formatScore(averageScore) }}</text>
+                <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
+              </svg>
+            </ng-container>
+            <ng-template #ringLoading>
+              <div class="ring-loader" aria-label="Carregando avaliação de frequência">
+                <mat-progress-spinner diameter="56" strokeWidth="4" mode="indeterminate"
+                  aria-hidden="true"></mat-progress-spinner>
+              </div>
+            </ng-template>
+          </div>
+        </div>
+      </section>
+
+      <section class="monthly-attendance-card" aria-label="Presença por mês">
+        <div class="card-title">
+          <span class="material-icons">show_chart</span>
+          <strong>Gráfico de linha percentual de presença mensal</strong>
+        </div>
+        <div class="monthly-chart-legend" aria-label="Legenda do gráfico">
+          <span class="monthly-legend-item">
+            <span class="monthly-legend-square trend-up" aria-hidden="true"></span>
+            <span>Aumento</span>
+          </span>
+          <span class="monthly-legend-item">
+            <span class="monthly-legend-square trend-down" aria-hidden="true"></span>
+            <span>Queda</span>
+          </span>
+          <span class="monthly-legend-item">
+            <span class="monthly-legend-square trend-same" aria-hidden="true"></span>
+            <span>Sem alteração</span>
+          </span>
+          <span class="monthly-legend-item">
+            <span class="monthly-legend-square no-data" aria-hidden="true"></span>
+            <span>Sem registros</span>
+          </span>
+        </div>
+        <p class="monthly-chart-hint">
+          Clique em uma linha ou ponto do gráfico para visualizar os detalhes do mês.
+        </p>
+        <div class="monthly-classroom-filter">
+          <mat-form-field class="material-select monthly-classroom-select" appearance="outline">
+            <mat-label>Turma do gráfico</mat-label>
+            <mat-select id="monthly-classroom-select" panelClass="compact-select-panel"
+              [value]="selectedMonthlyClassroom" (selectionChange)="setMonthlyClassroomFilter($event.value)"
+              aria-label="Filtrar presença mensal por turma">
+              <mat-option value="all">Todas</mat-option>
+              <mat-option *ngFor="let classroom of monthlyClassroomOptions" [value]="classroom">
+                {{ classroom }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+        <div class="monthly-chart-wrapper" *ngIf="!isLoadingAttendanceScore; else monthlyChartLoading">
+          <svg class="monthly-line-chart" viewBox="0 0 620 235" role="img"
+            [attr.aria-label]="'Percentual de presença de janeiro até ' + (monthlyAttendanceSummary.at(-1)?.label || 'o mês atual')">
+            <line class="chart-grid-line" x1="42" y1="33" x2="580" y2="33"></line>
+            <line class="chart-grid-line" x1="42" y1="105.5" x2="580" y2="105.5"></line>
+            <line class="chart-grid-line" x1="42" y1="178" x2="580" y2="178"></line>
+            <text class="chart-axis-label" x="8" y="37">100%</text>
+            <text class="chart-axis-label" x="20" y="109">50%</text>
+            <text class="chart-axis-label" x="28" y="182">0%</text>
+            <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
+              <line *ngIf="i > 0" class="monthly-line" [class.trend-up]="getMonthlyTrend(i) === 'up'"
+                [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
+                [class.monthly-line-no-data]="hasMonthlyNoData(i)"
+                [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
+                role="button" [attr.aria-label]="'Detalhes da variação até ' + item.label"
+                [attr.x1]="getMonthlyChartX(i - 1)"
+                [attr.y1]="getMonthlyChartY(monthlyAttendanceSummary[i - 1].presentPct)" [attr.x2]="getMonthlyChartX(i)"
+                [attr.y2]="getMonthlyChartY(item.presentPct)"></line>
+            </ng-container>
+            <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
+              <circle class="monthly-point" [class.trend-up]="getMonthlyTrend(i) === 'up'"
+                [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
+                [class.monthly-point-no-data]="hasMonthlyPointNoData(i)"
+                [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
+                [attr.cx]="getMonthlyChartX(i)" [attr.cy]="getMonthlyChartY(item.presentPct)" r="4"
+                [attr.aria-label]="item.label + ': ' + item.presentPct + '% de presença'">
+                <title>{{ item.label }}: {{ item.presentPct }}% de presença</title>
+              </circle>
+              <text class="chart-month-label" [attr.x]="getMonthlyChartX(i)" y="211" text-anchor="middle">{{ item.label
+                }}</text>
+            </ng-container>
+          </svg>
+        </div>
+        <section class="monthly-details-panel" *ngIf="selectedMonthlyIndex !== null" aria-live="polite"
+          aria-label="Detalhes do mês selecionado">
+          <div class="monthly-details-heading">
+            <span class="material-icons" aria-hidden="true">calendar_month</span>
+            <strong>{{ getMonthlyFullLabel(selectedMonthlyIndex) }}</strong>
+            <button type="button" class="monthly-details-close" aria-label="Fechar detalhes"
+              (click)="clearMonthlyDetails()">
+              <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+          </div>
+          <div class="monthly-details-grid">
+            <div class="monthly-detail-item">
+              <span class="material-icons" aria-hidden="true">fact_check</span>
+              <div class="monthly-detail-content">
+                <span>Registros</span>
+                <strong>{{ monthlyAttendanceSummary[selectedMonthlyIndex].total }}</strong>
               </div>
             </div>
-          </ng-container>
-          <ng-template #attendanceContent>
-            <div class="score-row">
-              <div class="score-label">Média Geral:</div>
-              <div class="score-value">{{ formatScore(averageScore) }}/10</div>
+            <div class="monthly-detail-item">
+              <span class="material-icons" aria-hidden="true">percent</span>
+              <div class="monthly-detail-content">
+                <span>Presença</span>
+                <strong class="attendance-value">{{ monthlyAttendanceSummary[selectedMonthlyIndex].presentPct
+                  }}%</strong>
+              </div>
             </div>
-            <div class="performance-badge" [class.good]="performanceClass === 'good'"
-              [class.warning]="performanceClass === 'warning'" [class.danger]="performanceClass === 'danger'"
-              [attr.aria-label]="performanceLabel">
-              <span class="material-icons">check_circle</span>
-              <span class="badge-text">{{ performanceLabel }}</span>
+            <div class="monthly-detail-item">
+              <span class="material-icons" aria-hidden="true">trending_{{ getMonthlyTrend(selectedMonthlyIndex) === 'up'
+                ?
+                'up' : getMonthlyTrend(selectedMonthlyIndex) === 'down' ? 'down' : 'flat' }}</span>
+              <div class="monthly-detail-content">
+                <span>Variação</span>
+                <strong [class.trend-up]="getMonthlyTrend(selectedMonthlyIndex) === 'up'"
+                  [class.trend-down]="getMonthlyTrend(selectedMonthlyIndex) === 'down'"
+                  [class.trend-same]="getMonthlyTrend(selectedMonthlyIndex) === 'same'">
+                  {{ getMonthlyVariationLabel(selectedMonthlyIndex) }}
+                </strong>
+              </div>
             </div>
-          </ng-template>
-        </div>
+          </div>
+        </section>
+        <ng-template #monthlyChartLoading>
+          <div class="monthly-chart-loading" aria-label="Carregando presença por mês">Calculando...</div>
+        </ng-template>
+      </section>
+    </section>
 
-        <div class="overview-right" [attr.aria-hidden]="isLoadingAttendanceScore ? 'true' : 'false'">
-          <ng-container *ngIf="!isLoadingAttendanceScore; else ringLoading">
-            <svg class="score-ring" viewBox="0 0 42 42" role="img" aria-label="Média {{ averageScore }} de 10">
-              <circle class="ring-bg" cx="21" cy="21" r="15.5" />
-              <circle class="ring" cx="21" cy="21" r="15.5" [attr.stroke-dasharray]="calcDashArray(averageScore)"
-                [attr.stroke]="performanceClass === 'good' ? '#1f9d5f' : performanceClass === 'warning' ? '#f59e0b' : performanceClass === 'danger' ? '#dc2626' : '#1e3a8a'" />
-              <text x="21" y="22" class="ring-text" text-anchor="middle">{{ formatScore(averageScore) }}</text>
-              <text x="21" y="30" class="ring-subtext" text-anchor="middle">/10</text>
-            </svg>
-          </ng-container>
-          <ng-template #ringLoading>
-            <div class="ring-loader" aria-label="Carregando avaliação de frequência">
-              <mat-progress-spinner diameter="56" strokeWidth="4" mode="indeterminate"
-                aria-hidden="true"></mat-progress-spinner>
+    <section class="overview-card benefits-summary-card" aria-labelledby="benefits-summary-title">
+      <div class="benefits-logos" aria-label="Programas de benefícios">
+        <img src="/logo-bolsa-familia.webp" alt="Logo Bolsa Família" class="benefit-logo bolsa-familia-logo">
+        <img src="/logo-pe-de-meia.webp" alt="Logo Pé-de-meia" class="benefit-logo pe-de-meia-logo">
+      </div>
+      <div class="benefits-summary-header">
+        <div class="card-title">
+          <strong id="benefits-summary-title">Benefícios dos alunos</strong>
+        </div>
+        <span class="benefits-total">
+          <span class="material-icons" aria-hidden="true">groups</span>
+          {{ formatNumber(benefitSummary.totalStudents) }} alunos
+        </span>
+      </div>
+      <p class="benefits-summary-intro">
+        Na <strong>{{ schoolName }}</strong>, veja como os alunos estão distribuídos entre o Pé-de-meia e o Bolsa Família.
+      </p>
+      <div class="benefits-metrics" aria-label="Resumo dos benefícios dos alunos">
+        <div class="benefit-metric benefit-metric-primary">
+          <strong>{{ getBenefitPercentage(benefitSummary.bothBenefits) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.bothBenefits) + '% dos alunos recebem os dois benefícios'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.bothBenefits)"></div>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.bothBenefits) }} alunos</span>
+          <span class="benefit-label">Recebem os dois benefícios</span>
+        </div>
+        <div class="benefit-metric">
+          <strong>{{ getBenefitPercentage(benefitSummary.onlyBolsaFamilia) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.onlyBolsaFamilia) + '% dos alunos recebem somente Bolsa Família'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.onlyBolsaFamilia)">
             </div>
-          </ng-template>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.onlyBolsaFamilia) }} alunos</span>
+          <span class="benefit-label">Recebem somente Bolsa Família</span>
+        </div>
+        <div class="benefit-metric">
+          <strong>{{ getBenefitPercentage(benefitSummary.onlyPeDeMeia) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.onlyPeDeMeia) + '% dos alunos recebem somente Pé-de-meia'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.onlyPeDeMeia)"></div>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.onlyPeDeMeia) }} alunos</span>
+          <span class="benefit-label">Recebem somente Pé-de-meia</span>
+        </div>
+        <div class="benefit-metric benefit-metric-muted">
+          <strong>{{ getBenefitPercentage(benefitSummary.missingBoth) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.missingBoth) + '% dos alunos não informaram nenhum dos dois benefícios'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.missingBoth)"></div>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.missingBoth) }} alunos</span>
+          <span class="benefit-label">Não informaram nenhum dos dois benefícios</span>
+        </div>
+        <div class="benefit-metric benefit-metric-muted">
+          <strong>{{ getBenefitPercentage(benefitSummary.missingBolsaFamilia) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.missingBolsaFamilia) + '% dos alunos não informaram sobre o Bolsa Família'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.missingBolsaFamilia)">
+            </div>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.missingBolsaFamilia) }} alunos</span>
+          <span class="benefit-label">Não informaram sobre o Bolsa Família</span>
+        </div>
+        <div class="benefit-metric benefit-metric-muted">
+          <strong>{{ getBenefitPercentage(benefitSummary.missingPeDeMeia) }}%</strong>
+          <div class="benefit-bar-track" role="img"
+            [attr.aria-label]="getBenefitPercentage(benefitSummary.missingPeDeMeia) + '% dos alunos não informaram sobre o Pé-de-meia'">
+            <div class="benefit-bar-fill" [style.height.%]="getBenefitPercentage(benefitSummary.missingPeDeMeia)"></div>
+          </div>
+          <span class="benefit-count">{{ formatNumber(benefitSummary.missingPeDeMeia) }} alunos</span>
+          <span class="benefit-label">Não informaram sobre o Pé-de-meia</span>
         </div>
       </div>
+      <p class="benefits-summary-note">
+        Os indicadores de informação ausente podem se sobrepor quando falta informar apenas um dos benefícios.
+      </p>
     </section>
 
     <section class="overview-card attendance-summary-card" aria-label="Resumo de presença">
@@ -231,121 +435,6 @@
           </div>
         </div>
       </div>
-    </section>
-
-    <section class="overview-card monthly-attendance-card" aria-label="Presença por mês">
-      <div class="card-title">
-        <span class="material-icons">show_chart</span>
-        <strong>Gráfico de linha percentual de presença mensal</strong>
-      </div>
-      <div class="monthly-chart-legend" aria-label="Legenda do gráfico">
-        <span class="monthly-legend-item">
-          <span class="monthly-legend-square trend-up" aria-hidden="true"></span>
-          <span>Aumento</span>
-        </span>
-        <span class="monthly-legend-item">
-          <span class="monthly-legend-square trend-down" aria-hidden="true"></span>
-          <span>Queda</span>
-        </span>
-        <span class="monthly-legend-item">
-          <span class="monthly-legend-square trend-same" aria-hidden="true"></span>
-          <span>Sem alteração</span>
-        </span>
-        <span class="monthly-legend-item">
-          <span class="monthly-legend-square no-data" aria-hidden="true"></span>
-          <span>Sem registros</span>
-        </span>
-      </div>
-      <p class="monthly-chart-hint">
-        Clique em uma linha ou ponto do gráfico para visualizar os detalhes do mês.
-      </p>
-      <div class="monthly-classroom-filter">
-        <mat-form-field class="material-select monthly-classroom-select" appearance="outline">
-          <mat-label>Turma do gráfico</mat-label>
-          <mat-select id="monthly-classroom-select" panelClass="compact-select-panel" [value]="selectedMonthlyClassroom"
-            (selectionChange)="setMonthlyClassroomFilter($event.value)" aria-label="Filtrar presença mensal por turma">
-            <mat-option value="all">Todas</mat-option>
-            <mat-option *ngFor="let classroom of monthlyClassroomOptions" [value]="classroom">
-              {{ classroom }}
-            </mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-      <div class="monthly-chart-wrapper" *ngIf="!isLoadingAttendanceScore; else monthlyChartLoading">
-        <svg class="monthly-line-chart" viewBox="0 0 620 235" role="img"
-          [attr.aria-label]="'Percentual de presença de janeiro até ' + (monthlyAttendanceSummary.at(-1)?.label || 'o mês atual')">
-          <line class="chart-grid-line" x1="42" y1="33" x2="580" y2="33"></line>
-          <line class="chart-grid-line" x1="42" y1="105.5" x2="580" y2="105.5"></line>
-          <line class="chart-grid-line" x1="42" y1="178" x2="580" y2="178"></line>
-          <text class="chart-axis-label" x="8" y="37">100%</text>
-          <text class="chart-axis-label" x="20" y="109">50%</text>
-          <text class="chart-axis-label" x="28" y="182">0%</text>
-          <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
-            <line *ngIf="i > 0" class="monthly-line" [class.trend-up]="getMonthlyTrend(i) === 'up'"
-              [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
-              [class.monthly-line-no-data]="hasMonthlyNoData(i)"
-              [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
-              role="button" [attr.aria-label]="'Detalhes da variação até ' + item.label"
-              [attr.x1]="getMonthlyChartX(i - 1)"
-              [attr.y1]="getMonthlyChartY(monthlyAttendanceSummary[i - 1].presentPct)" [attr.x2]="getMonthlyChartX(i)"
-              [attr.y2]="getMonthlyChartY(item.presentPct)"></line>
-          </ng-container>
-          <ng-container *ngFor="let item of monthlyAttendanceSummary; let i = index">
-            <circle class="monthly-point" [class.trend-up]="getMonthlyTrend(i) === 'up'"
-              [class.trend-down]="getMonthlyTrend(i) === 'down'" [class.trend-same]="getMonthlyTrend(i) === 'same'"
-              [class.monthly-point-no-data]="hasMonthlyPointNoData(i)"
-              [class.monthly-chart-active]="selectedMonthlyIndex === i" (click)="showMonthlyDetails(i)" tabindex="0"
-              [attr.cx]="getMonthlyChartX(i)" [attr.cy]="getMonthlyChartY(item.presentPct)" r="4"
-              [attr.aria-label]="item.label + ': ' + item.presentPct + '% de presença'">
-              <title>{{ item.label }}: {{ item.presentPct }}% de presença</title>
-            </circle>
-            <text class="chart-month-label" [attr.x]="getMonthlyChartX(i)" y="211" text-anchor="middle">{{ item.label
-              }}</text>
-          </ng-container>
-        </svg>
-      </div>
-      <section class="monthly-details-panel" *ngIf="selectedMonthlyIndex !== null" aria-live="polite"
-        aria-label="Detalhes do mês selecionado">
-        <div class="monthly-details-heading">
-          <span class="material-icons" aria-hidden="true">calendar_month</span>
-          <strong>{{ getMonthlyFullLabel(selectedMonthlyIndex) }}</strong>
-          <button type="button" class="monthly-details-close" aria-label="Fechar detalhes"
-            (click)="clearMonthlyDetails()">
-            <span class="material-icons" aria-hidden="true">close</span>
-          </button>
-        </div>
-        <div class="monthly-details-grid">
-          <div class="monthly-detail-item">
-            <span class="material-icons" aria-hidden="true">fact_check</span>
-            <div class="monthly-detail-content">
-              <span>Registros</span>
-              <strong>{{ monthlyAttendanceSummary[selectedMonthlyIndex].total }}</strong>
-            </div>
-          </div>
-          <div class="monthly-detail-item">
-            <span class="material-icons" aria-hidden="true">percent</span>
-            <div class="monthly-detail-content">
-              <span>Presença</span>
-              <strong class="attendance-value">{{ monthlyAttendanceSummary[selectedMonthlyIndex].presentPct }}%</strong>
-            </div>
-          </div>
-          <div class="monthly-detail-item">
-            <span class="material-icons" aria-hidden="true">trending_{{ getMonthlyTrend(selectedMonthlyIndex) === 'up' ?
-              'up' : getMonthlyTrend(selectedMonthlyIndex) === 'down' ? 'down' : 'flat' }}</span>
-            <div class="monthly-detail-content">
-              <span>Variação</span>
-              <strong [class.trend-up]="getMonthlyTrend(selectedMonthlyIndex) === 'up'"
-                [class.trend-down]="getMonthlyTrend(selectedMonthlyIndex) === 'down'"
-                [class.trend-same]="getMonthlyTrend(selectedMonthlyIndex) === 'same'">
-                {{ getMonthlyVariationLabel(selectedMonthlyIndex) }}
-              </strong>
-            </div>
-          </div>
-        </div>
-      </section>
-      <ng-template #monthlyChartLoading>
-        <div class="monthly-chart-loading" aria-label="Carregando presença por mês">Calculando...</div>
-      </ng-template>
     </section>
 
     <section class="overview-card classroom-card" aria-label="Situação da frequência por turma">

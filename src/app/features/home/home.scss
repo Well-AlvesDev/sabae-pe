@@ -12,6 +12,52 @@
   overflow: hidden;
 }
 
+@media (min-width: 1100px) {
+  .dashboard-shell {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    width: min(100%, 1480px);
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding-bottom: 32px;
+  }
+
+  .overview-title-row {
+    grid-column: 1 / -1;
+    width: min(720px, 100%);
+    margin: calc(72px + 12px) 0 0 12px;
+  }
+
+  .overview-title-row .overview-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .overview-card,
+  .attendance-summary-card {
+    width: auto;
+    margin: 0;
+  }
+
+  .attendance-and-monthly-card {
+    grid-column: auto;
+    width: auto;
+    margin: 0;
+  }
+
+  .classroom-card { grid-column: auto; }
+}
+
+.attendance-and-monthly-card {
+  width: min(720px, 96%);
+  margin: 0 auto;
+}
+
+.attendance-and-monthly-card .monthly-attendance-card { margin-top: 20px; }
+
 dashboard-shell mat-card {
   width: min(720px, 100%);
 }
@@ -62,6 +108,13 @@ dashboard-shell mat-card {
   margin: calc(72px + 12px) auto 10px;
 }
 
+@media (min-width: 1100px) {
+  .overview-title-row {
+    width: min(720px, 100%);
+    margin: calc(72px + 12px) 0 0 12px;
+  }
+}
+
 .overview-title-row h2 {
   margin: 0;
   font-size: 18px;
@@ -103,6 +156,147 @@ dashboard-shell mat-card {
   padding: 18px;
   display: block;
   margin: 20px auto 0;
+}
+
+.benefits-summary-card { margin: 20px auto 0; }
+
+@media (min-width: 1100px) {
+  .benefits-summary-card { margin: 0; }
+
+  .attendance-summary-card {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    justify-self: stretch;
+    margin: 0;
+  }
+}
+
+.benefits-summary-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.benefits-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #52606d;
+  font-size: 16px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.benefits-total .material-icons { font-size: 17px; color: #0f4c91; }
+
+.benefits-logos {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 58px;
+  margin: 2px 0 12px;
+}
+
+.benefit-logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.bolsa-familia-logo { height: 52px; }
+.pe-de-meia-logo { height: 58px; }
+
+.benefits-summary-intro {
+  margin: 2px 0 16px;
+  color: #000;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.benefits-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+
+.benefit-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 190px;
+  padding: 12px;
+  border: 1px solid #1e1e1e;
+  background: white;
+}
+
+.benefit-metric strong { display: block; }
+
+.benefit-metric strong {
+  color: #198754;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.benefit-metric-muted strong { color: #dc2626; }
+
+.benefit-bar-track {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 92px;
+  margin: 8px auto 8px;
+  width: min(52px, 45%);
+  background: #e8edf2;
+  border: 1px solid #cbd5df;
+  overflow: hidden;
+}
+
+.benefit-bar-fill {
+  width: 100%;
+  min-height: 0;
+  background: #198754;
+  transition: height 0.35s ease;
+}
+
+.benefit-metric-muted .benefit-bar-fill { background: #dc2626; }
+
+.benefit-count {
+  display: block;
+  color: #000;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.benefit-label {
+  display: block;
+  margin-top: 4px;
+  color: #000;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.benefit-metric-primary { border-color: #272727; background: #ffffff; }
+
+.benefits-summary-note {
+  margin: 14px 0 0;
+  color: #feffff;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .benefits-summary-header { flex-direction: column; gap: 2px; }
+  .benefits-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .benefit-metric { min-height: 180px; padding: 10px 8px; }
+  .benefit-bar-track { height: 78px; width: 42px; }
+  .benefit-label { font-size: 11px; }
 }
 
 .overview-body {

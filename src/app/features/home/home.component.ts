@@ -17,6 +17,7 @@ import {
   getActiveStudentFunctionRules,
   getTbdaLastSearchLabel,
   hydrateStudentFunctionRulesFromIndexedDb,
+  parseStudentBenefitsCellValue,
   setTbdaLastSearchLabel,
   syncTbdaCache,
   supabase,
@@ -53,6 +54,15 @@ export class HomeComponent implements OnInit, OnDestroy {
     presentPct: 0,
     fnjPct: 0,
     fjPct: 0,
+  };
+  public benefitSummary = {
+    totalStudents: 0,
+    bothBenefits: 0,
+    onlyBolsaFamilia: 0,
+    onlyPeDeMeia: 0,
+    missingBoth: 0,
+    missingBolsaFamilia: 0,
+    missingPeDeMeia: 0,
   };
   public monthlyAttendanceSummary: Array<{ month: number; label: string; presentPct: number; total: number }> = [];
   public monthlyClassroomOptions: string[] = [];
@@ -216,6 +226,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   private computeAttendanceScore(rows: Record<string, unknown>[]): number {
     this.attendanceRows = rows;
+    this.benefitSummary = this.buildBenefitSummary(rows);
     const counts = this.extractAttendanceCounts(rows);
     this.monthlyClassroomOptions = this.buildMonthlyClassroomOptions(rows);
     if (this.selectedMonthlyClassroom !== 'all' && !this.monthlyClassroomOptions.includes(this.selectedMonthlyClassroom)) {
@@ -239,6 +250,48 @@ export class HomeComponent implements OnInit, OnDestroy {
 
    const score = (counts.present / totalForScore) * 10;
     return Math.floor(score * 100) / 100;
+  }
+
+  private buildBenefitSummary(rows: Record<string, unknown>[]) {
+    const summary = {
+      totalStudents: rows.length,
+      bothBenefits: 0,
+      onlyBolsaFamilia: 0,
+      onlyPeDeMeia: 0,
+      missingBoth: 0,
+      missingBolsaFamilia: 0,
+      missingPeDeMeia: 0,
+    };
+
+    for (const row of rows) {
+      const benefits = parseStudentBenefitsCellValue(String(row['PM-BF'] ?? row['PM_BF'] ?? ''));
+
+      if (benefits.peDeMeia === 'sim' && benefits.bolsaFamilia === 'sim') {
+        summary.bothBenefits += 1;
+      } else if (benefits.peDeMeia === 'nao' && benefits.bolsaFamilia === 'sim') {
+        summary.onlyBolsaFamilia += 1;
+      } else if (benefits.peDeMeia === 'sim' && benefits.bolsaFamilia === 'nao') {
+        summary.onlyPeDeMeia += 1;
+      }
+
+      if (benefits.peDeMeia === 'nao-informado' && benefits.bolsaFamilia === 'nao-informado') {
+        summary.missingBoth += 1;
+      }
+      if (benefits.bolsaFamilia === 'nao-informado') {
+        summary.missingBolsaFamilia += 1;
+      }
+      if (benefits.peDeMeia === 'nao-informado') {
+        summary.missingPeDeMeia += 1;
+      }
+    }
+
+    return summary;
+  }
+
+  public getBenefitPercentage(count: number): number {
+    return this.benefitSummary.totalStudents
+      ? Math.round((count / this.benefitSummary.totalStudents) * 100)
+      : 0;
   }
 
   private buildMonthlyAttendanceSummary(
