@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { rememberModuleAccess } from '../../auth.guard';
 import { ACCESS_MODULES, refreshActiveModuleCaches, setActiveTable, supabase, supabaseWithSessionStorage } from '../../supabase';
 
 @Component({
@@ -174,6 +175,8 @@ export class LoginComponent implements OnInit {
         this.authError = 'Este módulo de acesso não pertence a este usuário.';
         return;
       }
+
+      rememberModuleAccess(data.session?.access_token, this.loginData.accessModule, true);
 
       try {
         await refreshActiveModuleCaches(!this.loginData.remember);
