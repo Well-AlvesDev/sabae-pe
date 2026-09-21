@@ -14,7 +14,6 @@ import {
   getStudentFunctionRules,
   getTbdaClassrooms,
   getTbdaShifts,
-  getTbdaCache,
   hydrateStudentFunctionRulesFromIndexedDb,
   insertStudent,
   parseStudentBenefitsCellValue,
@@ -67,6 +66,13 @@ type StudentSearchItem = {
   bolsaFamilia: StudentBenefitsSelection;
 };
 
+type StudentBenefitUpdate = {
+  registration?: string;
+  name?: string;
+  peDeMeia: StudentBenefitsSelection;
+  bolsaFamilia: StudentBenefitsSelection;
+};
+
 export type StudentOperationDialogData = {
   operation: StudentOperation;
 };
@@ -86,7 +92,8 @@ export type StudentOperationDialogData = {
     MatSelectModule,
   ],
   template: `
-    <section class="operation-dialog" [class.function-creation-dialog]="data.operation === 'Criar função'" aria-labelledby="operation-dialog-title">
+    <section class="operation-dialog" [class.function-creation-dialog]="data.operation === 'Criar função'"
+      [class.benefit-operation-dialog]="data.operation === 'Atribuir Pé de meia/Bolsa Família'" aria-labelledby="operation-dialog-title">
       <header class="dialog-header">
         <div>
           <p class="dialog-eyebrow"
@@ -98,6 +105,20 @@ export type StudentOperationDialogData = {
             {{ data.operation === 'Visualizar aluno' ? 'Visualizar aluno' : data.operation.startsWith('Criar função') || data.operation.startsWith('Visualizar funções') || data.operation.startsWith('Excluir função') ? 'Funções' : 'Operar aluno' }}
           </p>
           <h2 id="operation-dialog-title">{{ data.operation }}</h2>
+          @if (data.operation === 'Atribuir Pé de meia/Bolsa Família') {
+            <button class="benefit-save-button" mat-flat-button type="button" (click)="saveBenefitChanges()"
+              [disabled]="isSavingBenefits()">
+              @if (isSavingBenefits()) {
+                <mat-spinner diameter="18" aria-label="Salvando alterações"></mat-spinner>
+              } @else {
+                <mat-icon>save</mat-icon>
+              }
+              Salvar
+            </button>
+            @if (benefitSaveError()) {
+              <p class="benefit-save-error" role="alert">{{ benefitSaveError() }}</p>
+            }
+          }
         </div>
         <button mat-icon-button type="button" mat-dialog-close aria-label="Fechar">
           <mat-icon>close</mat-icon>
@@ -386,6 +407,16 @@ export type StudentOperationDialogData = {
             <mat-option value="missing">Apenas não informados</mat-option>
           </mat-select>
         </mat-form-field>
+        <mat-form-field class="benefit-filter-field" appearance="outline">
+          <mat-label>Filtrar por sala</mat-label>
+          <mat-select [value]="benefitRoom()" (selectionChange)="setBenefitRoom($event.value)"
+            aria-label="Filtrar alunos por sala">
+            <mat-option value="all">Todas as salas</mat-option>
+            @for (classroom of classrooms(); track classroom) {
+              <mat-option [value]="classroom">{{ classroom }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
       }
       <mat-form-field class="search-field" appearance="outline">
         <mat-label>Pesquisar aluno</mat-label>
@@ -420,10 +451,12 @@ export type StudentOperationDialogData = {
             <mat-list-item class="student-result" (click)="selectStudent(student)" role="button">
               <mat-icon matListItemIcon>person</mat-icon>
               <span matListItemTitle>{{ student.name }}</span>
-              <span matListItemLine>Matrícula: {{ student.registration || 'não informada' }}</span>
-              @if (student.room) {
-                <span matListItemLine>Turma: {{ student.room }}</span>
-              }
+              <span matListItemLine>
+                Matrícula: {{ student.registration || 'não informada' }}
+                @if (student.room) {
+                  · Turma: {{ student.room }}
+                }
+              </span>
             </mat-list-item>
           }
         </mat-list>
@@ -448,6 +481,17 @@ export type StudentOperationDialogData = {
     :host { display: block; }
     .operation-dialog { display: flex; width: min(560px, calc(100vw - 32px)); height: min(560px, calc(100vh - 32px)); box-sizing: border-box; flex-direction: column; padding: 22px; color: #263746; }
     .function-creation-dialog { width: min(480px, calc(100vw - 32px)); height: auto; max-height: calc(100vh - 32px); padding: 16px; }
+    .benefit-operation-dialog { width: min(720px, calc(100vw - 24px)); height: min(760px, calc(100vh - 24px)); padding: 16px; }
+    .benefit-operation-dialog .dialog-header { margin-bottom: 10px; }
+    .benefit-operation-dialog h2 { font-size: 1.15rem; }
+    .benefit-operation-dialog .mat-mdc-form-field { --mat-form-field-container-height: 44px; }
+    .benefit-operation-dialog .student-result { min-height: 54px; }
+    :host ::ng-deep .benefit-operation-dialog .student-result .mdc-list-item__content { padding-top: 4px; padding-bottom: 4px; }
+    .benefit-save-button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 8px; background: #0f4d91 !important; color: #fff !important; }
+    .benefit-save-button:hover:not(:disabled) { background: #0c365c !important; }
+    .benefit-save-button:disabled { background: #8ba9cc !important; color: #f4f8fc !important; }
+    .benefit-save-button mat-icon { font-size: 18px; }
+    .benefit-save-error { margin: 6px 0 0; color: #b42318; font-size: 0.78rem; }
     .function-creation-dialog .dialog-header { margin-bottom: 12px; }
     .function-creation-dialog .function-creation-form { gap: 6px; }
     .function-creation-dialog .mat-mdc-form-field { --mat-form-field-container-height: 44px; }
@@ -514,6 +558,9 @@ export type StudentOperationDialogData = {
 export class StudentOperationDialogComponent {
   public readonly searchTerm = signal('');
   public readonly benefitFilter = signal<'all' | 'missing'>('all');
+  public readonly benefitRoom = signal('all');
+  public readonly isSavingBenefits = signal(false);
+  public readonly benefitSaveError = signal('');
   public readonly isLoading = signal(true);
   public readonly hasError = signal(false);
   public readonly students = signal<StudentSearchItem[]>([]);
@@ -534,6 +581,7 @@ export class StudentOperationDialogComponent {
   public readonly functionListSearchTerm = signal('');
   public readonly functionRules = signal<StudentFunctionRule[]>([]);
   public readonly selectedFunctionRule = signal<StudentFunctionRule | null>(null);
+  private readonly pendingBenefitUpdates = new Map<string, StudentBenefitUpdate>();
   public readonly functionFilteredStudents = computed(() => {
     const term = this.normalize(this.functionSearchTerm());
     if (!term) {
@@ -561,13 +609,15 @@ export class StudentOperationDialogComponent {
   public readonly filteredStudents = computed(() => {
     const term = this.normalize(this.searchTerm());
     const filter = this.benefitFilter();
+    const room = this.benefitRoom();
 
     return this.students().filter(student => {
       const matchesTerm = !term
         || this.normalize(student.name).includes(term)
         || this.normalize(student.registration).includes(term);
       const hasMissingBenefit = student.peDeMeia === 'nao-informado' || student.bolsaFamilia === 'nao-informado';
-      return matchesTerm && (filter === 'all' || hasMissingBenefit);
+      const matchesRoom = room === 'all' || student.room === room;
+      return matchesTerm && matchesRoom && (filter === 'all' || hasMissingBenefit);
     });
   });
   public readonly totalPages = computed(() => Math.max(1, Math.ceil(this.filteredStudents().length / this.pageSize)));
@@ -584,6 +634,60 @@ export class StudentOperationDialogComponent {
   public setBenefitFilter(value: 'all' | 'missing'): void {
     this.benefitFilter.set(value);
     this.currentPage.set(1);
+  }
+
+  public setBenefitRoom(value: string): void {
+    this.benefitRoom.set(value);
+    this.currentPage.set(1);
+  }
+
+  public async saveBenefitChanges(): Promise<void> {
+    if (this.isSavingBenefits() || this.pendingBenefitUpdates.size === 0) {
+      return;
+    }
+
+    this.isSavingBenefits.set(true);
+    this.benefitSaveError.set('');
+    try {
+      for (const update of this.pendingBenefitUpdates.values()) {
+        await updateStudentBenefits(
+          update.registration ?? '',
+          update.name ?? '',
+          update.peDeMeia,
+          update.bolsaFamilia,
+        );
+      }
+
+      const savedStudentsCount = this.pendingBenefitUpdates.size;
+      this.pendingBenefitUpdates.clear();
+      this.dialogRef.afterClosed().subscribe(() => {
+        this.dialog.open(StudentOperationSuccessDialogComponent, {
+          data: {
+            student: {
+              name: `${savedStudentsCount} aluno${savedStudentsCount === 1 ? '' : 's'}`,
+              registration: '',
+              room: '',
+              shift: '',
+              status: 'Matriculado',
+              peDeMeia: 'nao-informado',
+              bolsaFamilia: 'nao-informado',
+            },
+            message: `Alterações de benefícios salvas com sucesso para ${savedStudentsCount} aluno${savedStudentsCount === 1 ? '' : 's'}.`,
+          },
+          autoFocus: false,
+          maxWidth: 'calc(100vw - 32px)',
+        });
+      });
+      this.dialogRef.close(true);
+    } catch {
+      this.benefitSaveError.set('Não foi possível salvar as alterações dos benefícios.');
+    } finally {
+      this.isSavingBenefits.set(false);
+    }
+  }
+
+  private getStudentKey(student: StudentSearchItem): string {
+    return student.registration || student.name;
   }
 
   public previousPage(): void {
@@ -755,10 +859,26 @@ export class StudentOperationDialogComponent {
     }
 
     if (this.data.operation === 'Atribuir Pé de meia/Bolsa Família') {
-      this.dialog.open(StudentBenefitsDialogComponent, {
+      const benefitsDialogRef = this.dialog.open(StudentBenefitsDialogComponent, {
         data: { student },
         autoFocus: false,
         maxWidth: 'calc(100vw - 32px)',
+      });
+      benefitsDialogRef.afterClosed().subscribe((result: StudentBenefitUpdate | undefined) => {
+        if (!result) {
+          return;
+        }
+
+        this.students.update(students => students.map(candidate =>
+          candidate.registration === student.registration && candidate.name === student.name
+            ? { ...candidate, peDeMeia: result.peDeMeia, bolsaFamilia: result.bolsaFamilia }
+            : candidate,
+        ));
+        this.pendingBenefitUpdates.set(this.getStudentKey(student), {
+          ...result,
+          registration: student.registration,
+          name: student.name,
+        });
       });
       return;
     }
@@ -1493,15 +1613,10 @@ type StudentBenefitsDialogData = {
         </mat-select>
       </mat-form-field>
 
-      @if (errorMessage()) {
-        <p class="error-message" role="alert"><mat-icon>error_outline</mat-icon>{{ errorMessage() }}</p>
-      }
-
       <footer class="status-actions">
         <button mat-button type="button" mat-dialog-close>Cancelar</button>
-        <button class="execute-button" mat-flat-button type="button" (click)="execute()" [disabled]="isSaving()">
-          @if (isSaving()) { <mat-spinner diameter="18"></mat-spinner> }
-          @else { <mat-icon>play_arrow</mat-icon> }
+        <button class="execute-button" mat-flat-button type="button" (click)="execute()">
+          <mat-icon>save</mat-icon>
           Salvar
         </button>
       </footer>
@@ -1523,77 +1638,29 @@ type StudentBenefitsDialogData = {
     .execute-button { background: #34b447 !important; color: #fff !important; }
     .execute-button:hover:not(:disabled) { background: #278d36 !important; }
     .execute-button:disabled { background: #8bc991 !important; color: #f4fff5 !important; }
+    .benefits-dialog .execute-button { background: #0f4d91 !important; }
+    .benefits-dialog .execute-button:hover:not(:disabled) { background: #0c365c !important; }
+    .benefits-dialog .execute-button:disabled { background: #8ba9cc !important; color: #f4f8fc !important; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StudentBenefitsDialogComponent {
   public recebePeMeia: 'sim' | 'nao' | 'nao-informado' = 'nao-informado';
   public recebeBolsaFamilia: 'sim' | 'nao' | 'nao-informado' = 'nao-informado';
-  public readonly isSaving = signal(false);
-  public readonly errorMessage = signal('');
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public readonly data: StudentBenefitsDialogData,
     private readonly dialogRef: MatDialogRef<StudentBenefitsDialogComponent>,
-    private readonly dialog: MatDialog,
   ) {
-    this.applySavedBenefits();
-    void ensureTbdaCache().then(() => this.applySavedBenefits());
+    this.recebePeMeia = data.student.peDeMeia;
+    this.recebeBolsaFamilia = data.student.bolsaFamilia;
   }
 
-  private applySavedBenefits(): void {
-    const rows = getTbdaCache() ?? [];
-    const row = rows.find(studentRow => {
-      const rowRegistration = String(studentRow['MAT'] ?? studentRow['MATRICULA'] ?? studentRow['MATRÍCULA'] ?? studentRow['registration'] ?? '').trim();
-      const rowName = String(studentRow['NOME'] ?? studentRow['name'] ?? '').trim();
-      if (this.data.student.registration && rowRegistration && rowRegistration === this.data.student.registration) {
-        return true;
-      }
-      return Boolean(this.data.student.name) && this.normalizeStudentName(rowName) === this.normalizeStudentName(this.data.student.name);
-    });
-
-    const savedValue = parseStudentBenefitsCellValue(String(row?.['PM-BF'] ?? row?.['PM_BF'] ?? ''));
-    this.recebePeMeia = savedValue.peDeMeia;
-    this.recebeBolsaFamilia = savedValue.bolsaFamilia;
-  }
-
-  private normalizeStudentName(value: string): string {
-    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('pt-BR');
-  }
-
-  private getBenefitLabel(value: 'sim' | 'nao' | 'nao-informado'): string {
-    if (value === 'sim') {
-      return 'Sim';
-    }
-    return value === 'nao-informado' ? 'Não informado' : 'Não';
-  }
-
-  public async execute(): Promise<void> {
-    this.isSaving.set(true);
-    this.errorMessage.set('');
-    try {
-      await updateStudentBenefits(
-        this.data.student.registration,
-        this.data.student.name,
-        this.recebePeMeia,
-        this.recebeBolsaFamilia,
-      );
-      this.dialogRef.afterClosed().subscribe(() => {
-        this.dialog.open(StudentOperationSuccessDialogComponent, {
-          data: {
-            student: this.data.student,
-            message: `Benefícios atualizados para ${this.data.student.name}: Pé de meia ${this.getBenefitLabel(this.recebePeMeia)}; Bolsa Família ${this.getBenefitLabel(this.recebeBolsaFamilia)}.`,
-          },
-          autoFocus: false,
-          maxWidth: 'calc(100vw - 32px)',
-        });
-      });
-      this.dialogRef.close(true);
-    } catch {
-      this.errorMessage.set('Não foi possível salvar a atribuição dos benefícios.');
-    } finally {
-      this.isSaving.set(false);
-    }
+  public execute(): void {
+    this.dialogRef.close({
+      peDeMeia: this.recebePeMeia,
+      bolsaFamilia: this.recebeBolsaFamilia,
+    } satisfies StudentBenefitUpdate);
   }
 }
 

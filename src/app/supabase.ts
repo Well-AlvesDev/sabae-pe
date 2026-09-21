@@ -1277,7 +1277,7 @@ export function formatStudentBenefitsCellValue(
     if (normalized === 'sim') {
       return 'sim';
     }
-    return normalized === 'nao informado' ? 'nao-informado' : 'nao';
+    return normalized === 'nao informado' || normalized === 'nao-informado' ? 'nao-informado' : 'nao';
   };
 
   const format = (value: StudentBenefitsSelection): string => {
@@ -1302,6 +1302,9 @@ export function parseStudentBenefitsCellValue(value: string | null | undefined):
     .filter(Boolean);
 
   const parseValue = (item: string | undefined): StudentBenefitsSelection => {
+    if (item === undefined) {
+      return 'nao-informado';
+    }
     if (item === 'sim') {
       return 'sim';
     }
