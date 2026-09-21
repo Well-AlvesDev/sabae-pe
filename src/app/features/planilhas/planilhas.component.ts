@@ -22,6 +22,7 @@ import {
   hydrateStudentFunctionRulesFromIndexedDb,
   getTbdaShifts,
   normalizeAttendanceMonth,
+  parseStudentBenefitsCellValue,
   supabase,
   supabaseWithSessionStorage,
 } from '../../supabase';
@@ -47,6 +48,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   public selectedMonth = '';
   public selectedShift = '';
   public selectedRoom = '';
+  public includeBenefitsColumns: 'sim' | 'nao' = 'nao';
   public registrations = '';
   public rooms: string[] = [];
   public isMenuOpen = false;
@@ -250,7 +252,10 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
         .filter(row => !requestedRegistrations.length || requestedRegistrations.includes(this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula')))
         .map(row => this.createReportRow(row, month));
       const orderedRows = this.orderRowsByRegistration(filteredRows, requestedOrder);
-      const headers = ['MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', ...this.days];
+      const benefitHeaders = this.includeBenefitsColumns === 'sim'
+        ? ['BOLSA FAMÍLIA', 'PÉ DE MEIA']
+        : [];
+      const headers = ['MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', ...benefitHeaders, ...this.days];
       const worksheet = XLSX.utils.aoa_to_sheet([
         headers,
         ...orderedRows.map(row => headers.map(header => row[header] ?? '')),
@@ -268,14 +273,14 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
         if (header === 'NOME') {
           return 14;
         }
-        if (['TURMA', 'TURNO', 'STATUS', ...this.days].includes(header)) {
+        if (['TURMA', 'TURNO', 'STATUS', 'BOLSA FAMÍLIA', 'PÉ DE MEIA', ...this.days].includes(header)) {
           return 9;
         }
         return 10;
       };
 
       const getCellHorizontalAlignment = (header: string): 'center' | 'left' => {
-        if (header === 'NOME') {
+        if (header === 'NOME' || header === 'BOLSA FAMÍLIA' || header === 'PÉ DE MEIA') {
           return 'left';
         }
         return 'center';
@@ -291,13 +296,14 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
           }
 
           const targetFontSize = rowIndex === 0 ? 10 : getCellFontSize(header);
-          const targetAlignment = rowIndex === 0 ? 'center' : getCellHorizontalAlignment(header);
+          const targetAlignment = getCellHorizontalAlignment(header);
+          const targetFontName = ['BOLSA FAMÍLIA', 'PÉ DE MEIA'].includes(header) ? 'Calibri' : 'Arial';
 
           cell.s = {
             ...(cell.s ?? {}),
             font: {
               ...(cell.s?.font ?? {}),
-              name: 'Arial',
+              name: targetFontName,
               sz: targetFontSize,
             },
             border: {
@@ -309,6 +315,7 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
             alignment: {
               ...(cell.s?.alignment ?? {}),
               horizontal: targetAlignment,
+              vertical: 'center',
             },
           };
         }
@@ -355,12 +362,15 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
   }
 
   private createReportRow(row: Record<string, unknown>, month: string): ReportRow {
+    const benefits = parseStudentBenefitsCellValue(this.getRowText(row, 'PM-BF'));
     const reportRow: ReportRow = {
       'MATRÍCULA': this.getRowText(row, 'MAT', 'MATRICULA', 'MATRÍCULA', 'mat', 'matricula', 'matrícula'),
       'NOME': this.getRowText(row, 'NOME'),
       'TURMA': this.getRowText(row, 'TURMA'),
       'TURNO': this.getRowText(row, 'TURNO'),
       'STATUS': this.getRowText(row, 'STATUS'),
+      'BOLSA FAMÍLIA': this.formatBenefitValue(benefits.bolsaFamilia),
+      'PÉ DE MEIA': this.formatBenefitValue(benefits.peDeMeia),
     };
 
     for (const day of this.days) {
@@ -378,6 +388,16 @@ export class PlanilhasComponent implements OnInit, OnDestroy {
     }
 
     return reportRow;
+  }
+
+  private formatBenefitValue(value: 'sim' | 'nao' | 'nao-informado'): string {
+    if (value === 'sim') {
+      return 'SIM';
+    }
+    if (value === 'nao') {
+      return 'NÃO';
+    }
+    return '';
   }
 
   private orderRowsByRegistration(rows: ReportRow[], requestedOrder = this.getRequestedRegistrationOrder()): ReportRow[] {

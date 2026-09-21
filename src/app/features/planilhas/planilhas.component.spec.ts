@@ -26,4 +26,26 @@ describe('PlanilhasComponent', () => {
       '3726760',
     ]);
   });
+
+  it('creates benefit columns in the requested order and leaves missing values blank', () => {
+    const component = new PlanilhasComponent({} as Router, {} as ChangeDetectorRef, {} as MatDialog);
+
+    const row = (component as any).createReportRow({
+      MAT: '123',
+      NOME: 'Aluno',
+      TURMA: 'A',
+      TURNO: 'Manhã',
+      STATUS: 'Matriculado',
+      'PM-BF': 'sim, não informado',
+    }, 'Janeiro');
+
+    expect(['MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', 'BOLSA FAMÍLIA', 'PÉ DE MEIA']).toEqual([
+      'MATRÍCULA', 'NOME', 'TURMA', 'TURNO', 'STATUS', 'BOLSA FAMÍLIA', 'PÉ DE MEIA',
+    ]);
+    expect(row['BOLSA FAMÍLIA']).toBe('');
+    expect(row['PÉ DE MEIA']).toBe('SIM');
+    expect((component as any).createReportRow({ 'PM-BF': 'não, sim' }, 'Janeiro')['BOLSA FAMÍLIA']).toBe('SIM');
+    expect((component as any).createReportRow({ 'PM-BF': 'não, não' }, 'Janeiro')['BOLSA FAMÍLIA']).toBe('NÃO');
+    expect((component as any).createReportRow({ 'PM-BF': null }, 'Janeiro')['BOLSA FAMÍLIA']).toBe('');
+  });
 });

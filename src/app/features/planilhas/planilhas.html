@@ -134,6 +134,16 @@
             </mat-form-field>
         </div>
 
+        <div class="field-group">
+            <mat-form-field class="material-select" appearance="outline">
+                <mat-label>Incluir coluna Bolsa família e Pé de meia</mat-label>
+                <mat-select [(ngModel)]="includeBenefitsColumns" aria-label="Incluir coluna Bolsa família e Pé de meia">
+                    <mat-option value="sim">Sim</mat-option>
+                    <mat-option value="nao">Não</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
         <div class="field-group registrations-group">
             <label class="registrations-label" for="registrations">Ordem de matrículas (Opcional)</label>
             <p class="registrations-hint">Deixe vazio para usar ordenação padrão do sistema (por sala e nome)</p>
