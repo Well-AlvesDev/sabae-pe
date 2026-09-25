@@ -304,6 +304,7 @@ export const ACCESS_MODULES = [
   { label: 'ESCOLA DOM BOSCO', table: 'DOMBOSCO' },
   { label: 'EREFEM Cel LUIZ IGNÁCIO', table: 'USINA' },
   {label: 'ETE MIGUEL ARRAES DE ALENCAR', table: 'ETEMIGUELARRAES'},
+  {label: 'EREM DR JOÃO ALFREDO', table: 'EREMDRJOAOALFR'},
 ] as const;
 
 export type AccessModule = typeof ACCESS_MODULES[number];
